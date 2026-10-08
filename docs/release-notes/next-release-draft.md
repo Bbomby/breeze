@@ -32,6 +32,10 @@ Last release: **v0.121.0** (2026-10-03).
   produced (shown without a channel name), and deleting a maintenance window
   removes all of its occurrences.
 
+## Features / API
+
+- **Site location pin.** New `POST /api/v1/orgs/sites/:id/location` pins a site's coordinate (and optional 50-1000 m geofence radius) from the field; it requires `sites:set_location` and deliberately no MFA. `PATCH /orgs/sites/:id` also accepts `latitude`/`longitude`/`geofenceRadiusM` (still MFA-gated; both coordinates or neither). Only the site's coordinate is stored, never a technician position. Audited as `site.location_set`.
+
 ## Migrations
 
 - Adds nullable location columns to `sites` and `site_id` to `time_entries` (no backfill, no table rewrite).
