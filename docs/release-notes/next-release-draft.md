@@ -31,3 +31,8 @@ Last release: **v0.121.0** (2026-10-03).
   is kept. Deleting a notification channel keeps the alert delivery history it
   produced (shown without a channel name), and deleting a maintenance window
   removes all of its occurrences.
+
+## Migrations
+
+- Adds nullable location columns to `sites` and `site_id` to `time_entries` (no backfill, no table rewrite).
+- New `sites:set_location` permission (pin a site's map location from the field), granted to the Partner Technician, Org Technician and Org Admin system roles. Partner Admin already holds `*:*`; custom roles are unchanged.

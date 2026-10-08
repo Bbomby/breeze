@@ -230,6 +230,7 @@ export const DEFAULT_PERMISSIONS = [
   { resource: 'sites', action: 'read', description: 'View sites' },
   { resource: 'sites', action: 'write', description: 'Create and edit sites' },
   { resource: 'sites', action: 'delete', description: 'Delete sites' },
+  { resource: 'sites', action: 'set_location', description: "Pin a site's map location from the field" },
 
   // Remote access
   { resource: 'remote', action: 'access', description: 'Remote access to devices' },
@@ -350,7 +351,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDefinition[] = [
       'billing_profiles:read',
       'ticket_mailbox:read',
       'reports:read', 'reports:write',
-      'sites:read',
+      'sites:read', 'sites:set_location',
       'topology:read',
       'organizations:read',
       // AI chat (#6396): same reasoning as Org Technician.
@@ -416,7 +417,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDefinition[] = [
       'tickets:read', 'tickets:write', 'tickets:manage',
       'reports:read', 'reports:write', 'reports:delete', 'reports:export',
       'users:read', 'users:write', 'users:delete', 'users:invite',
-      'sites:read', 'sites:write', 'sites:delete',
+      'sites:read', 'sites:write', 'sites:delete', 'sites:set_location',
       'topology:read', 'topology:write', 'topology:execute',
       'remote:access',
       'audit:read',
@@ -472,7 +473,7 @@ export const SYSTEM_ROLES: readonly SystemRoleDefinition[] = [
       'alerts:read', 'alerts:acknowledge',
       'tickets:read',
       'reports:read', 'reports:write',
-      'sites:read',
+      'sites:read', 'sites:set_location',
       'topology:read', 'topology:write', 'topology:execute',
       'remote:access',
       // AI chat (#6396): a technician can run scripts and manage devices over
