@@ -86,8 +86,9 @@ export const timeEntries = pgTable('time_entries', {
   //   - time_entries_contract_line_org_chk: contract_line_id IS NULL OR org_id IS NOT NULL
   //   - time_entries_contract_line_chk:     contract_line_id IS NULL OR billing_status = 'contract'
   contractLineId: uuid('contract_line_id'),
-  // W06 (#3900) provenance. Server-stamped except 'timer'/'location', which
-  // /start and POST / accept from the client (#4186, zod-restricted).
+  // W06 (#3900) provenance. Server-stamped except client-supplied values
+  // (#4186, zod-restricted): /start accepts 'timer'|'location'; POST / accepts
+  // only 'location'.
   // Values enforced by CHECK time_entries_source_chk in SQL:
   // 'manual' | 'timer' | 'location' | 'remote_session' | 'support_session' |
   // 'ai_suggested' (#4177 — stamped by the intent release path only).
