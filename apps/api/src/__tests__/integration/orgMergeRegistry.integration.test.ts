@@ -269,7 +269,7 @@ const ORG_ID_COLUMN_UPDATE_REPOINT_TABLES: Readonly<Record<string, string>> = {
 
 /** BENIGN = fires on the repoint but does not obstruct it. Reason per entry. */
 const ORG_ID_BENIGN_TRIGGERS: Readonly<Record<string, string>> = {
-  // Customer work approval (#4617, 2026-12-17-150200): freezes a DECIDED
+  // Customer work approval (#4617, 2026-12-18-150200): freezes a DECIDED
   // request, but org_id is in its exempt list (to_jsonb(NEW) - org_id …), so an
   // org_id-only repoint, move or merge passes on every row, pending or decided.
   'ticket_approval_requests.ticket_approval_requests_decided_immutable': 'freezes decided rows but exempts org_id by name; an org_id-only repoint always passes',
