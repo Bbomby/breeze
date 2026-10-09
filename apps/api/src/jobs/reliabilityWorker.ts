@@ -205,10 +205,16 @@ export async function shutdownReliabilityWorker(): Promise<void> {
   }
 }
 
-export async function enqueueDeviceReliabilityComputation(deviceId: string): Promise<string> {
+export async function enqueueDeviceReliabilityComputation(
+  deviceId: string,
+  opts: { dedupeKey?: string } = {},
+): Promise<string> {
   const queue = getReliabilityQueue();
-  const slot = Math.floor(Date.now() / ON_DEMAND_RELIABILITY_DEDUPE_WINDOW_MS).toString(36);
-  const jobId = `reliability-device:${deviceId}:${slot}`;
+  // #5876: a baseline change must recompute even if a routine on-demand run
+  // already claimed this 10-minute slot, so callers can key the job themselves.
+  const jobId = opts.dedupeKey
+    ? `reliability-device:${deviceId}:k:${opts.dedupeKey}`
+    : `reliability-device:${deviceId}:${Math.floor(Date.now() / ON_DEMAND_RELIABILITY_DEDUPE_WINDOW_MS).toString(36)}`;
   const existing = await queue.getJob(jobId);
   if (existing) {
     const state = await existing.getState();
