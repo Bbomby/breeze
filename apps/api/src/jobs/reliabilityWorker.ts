@@ -212,8 +212,10 @@ export async function enqueueDeviceReliabilityComputation(
   const queue = getReliabilityQueue();
   // #5876: a baseline change must recompute even if a routine on-demand run
   // already claimed this 10-minute slot, so callers can key the job themselves.
+  // bullmq rejects a custom id containing ':' unless it splits into exactly 3
+  // parts, so the key segment is joined with '-' and must not carry ':'.
   const jobId = opts.dedupeKey
-    ? `reliability-device:${deviceId}:k:${opts.dedupeKey}`
+    ? `reliability-device:${deviceId}:k-${opts.dedupeKey.replace(/:/g, '-')}`
     : `reliability-device:${deviceId}:${Math.floor(Date.now() / ON_DEMAND_RELIABILITY_DEDUPE_WINDOW_MS).toString(36)}`;
   const existing = await queue.getJob(jobId);
   if (existing) {
