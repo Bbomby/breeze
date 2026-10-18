@@ -96,6 +96,8 @@ export function normalizePatch(raw: Record<string, unknown>, index: number): Pat
     vendor: typeof vendor === 'string' && vendor.trim() ? vendor : null,
     cveIds,
     installFailure: readInstallFailure(raw.installFailure),
+    // #8728: only GET /patches supplies it; the ring list leaves it undefined.
+    outstandingDeviceCount: typeof raw.outstandingDeviceCount === 'number' ? raw.outstandingDeviceCount : undefined,
   };
 }
 

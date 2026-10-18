@@ -14,6 +14,7 @@ import UpdateRingList, { type UpdateRingItem } from './UpdateRingList';
 import UpdateRingForm, { type UpdateRingFormValues } from './UpdateRingForm';
 import RingSelector, { type UpdateRing } from './RingSelector';
 import SourceFilterChips from './SourceFilterChips';
+import type { LoadPatchDevices } from './PatchDevicesPopover';
 import { fetchWithAuth } from '../../stores/auth';
 import { navigateTo } from '@/lib/navigation';
 import { useOrgStore } from '../../stores/orgStore';
@@ -495,6 +496,22 @@ export default function PatchesPage() {
     }
   };
 
+  // #8728: hostnames behind a row's outstanding device count, one page at a
+  // time. fetchWithAuth adds the selected org as ?orgId=, so the names are
+  // scoped exactly like the count on the list.
+  const loadPatchDevices = useCallback<LoadPatchDevices>(async (patchId, page) => {
+    const response = await fetchWithAuth(`/patches/${patchId}/devices?limit=50&page=${page}`);
+    if (!response.ok) {
+      if (response.status === 401) void navigateTo('/login', { replace: true });
+      throw new Error(`Failed to load devices (${response.status})`);
+    }
+    const body = await response.json();
+    return {
+      devices: Array.isArray(body?.data) ? body.data : [],
+      total: Number(body?.pagination?.total) || 0
+    };
+  }, []);
+
   const handleBulkDecline = async (patchIds: string[]) => {
     // Same partner-level scope requirement as approve (see handleBulkApprove).
     if (!canManageRings) {
@@ -931,6 +948,8 @@ export default function PatchesPage() {
             onUnapprove={handleUnapprove}
             onBulkApprove={handleBulkApprove}
             onBulkDecline={handleBulkDecline}
+            // The ring list (/update-rings/:id/patches) carries no device count.
+            loadPatchDevices={selectedRingId ? undefined : loadPatchDevices}
           />
         </>
       )}

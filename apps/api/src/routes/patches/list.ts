@@ -2,13 +2,18 @@ import { Hono } from 'hono';
 import { zValidator } from '../../lib/validation';
 import { and, eq, sql, asc, desc, type SQL, type Column } from 'drizzle-orm';
 import { requirePermission, requireScope } from '../../middleware/auth';
-import { PERMISSIONS } from '../../services/permissions';
+import { PERMISSIONS, type UserPermissions } from '../../services/permissions';
 import { db } from '../../db';
 import { readOwnPartnerAxisRows } from '../../db/partnerAxisRead';
 import { patches, patchApprovals, devices, devicePatches } from '../../db/schema';
-import { listPatchesSchema, listSourcesSchema, patchIdParamSchema } from './schemas';
+import { listPatchDevicesSchema, listPatchesSchema, listSourcesSchema, patchIdParamSchema } from './schemas';
 import { getPagination, inferPatchOs, resolvePartnerIdForOrg } from './helpers';
 import { loadPatchInstallFailures } from '../../services/patchInstallFailures';
+import {
+  listOutstandingDevices,
+  loadOutstandingDeviceCounts,
+  resolveOutstandingDeviceScope
+} from '../../services/patchOutstandingDevices';
 
 // Whitelist mapping sort keys (validated by listPatchesSchema) to real columns.
 // Never pass raw user input into orderBy — only keys present here are honored.
@@ -235,11 +240,24 @@ listRoutes.get(
       { orgId: query.orgId }
     );
 
+    // Device axis (#8728): how many devices in the caller's scope still need
+    // each patch on this page. One grouped query, one integer per row; the
+    // hostnames are on demand from GET /patches/:id/devices, which scopes
+    // through the same helper so the two cannot disagree.
+    const deviceScope = resolveOutstandingDeviceScope(auth, {
+      orgId: query.orgId,
+      allowedSiteIds: (c.get('permissions') as UserPermissions | undefined)?.allowedSiteIds
+    });
+    const outstandingCounts = deviceScope
+      ? await loadOutstandingDeviceCounts(patchList.map((patch) => patch.id), deviceScope)
+      : new Map<string, number>();
+
     const data = patchList.map(patch => ({
       ...patch,
       os: inferPatchOs(patch.osTypes, patch.source, patch.inferredOs),
       approvalStatus: approvalStatuses[patch.id] || 'pending',
-      installFailure: installFailures.get(patch.id) ?? null
+      installFailure: installFailures.get(patch.id) ?? null,
+      outstandingDeviceCount: outstandingCounts.get(patch.id) ?? 0
     }));
 
     return c.json({
@@ -270,6 +288,48 @@ listRoutes.get(
       : sources;
 
     return c.json({ data: filtered });
+  }
+);
+
+// GET /patches/:id/devices - Devices in the caller's scope that still need the
+// patch (#8728): the drill-down behind the list's outstanding device count.
+listRoutes.get(
+  '/:id/devices',
+  requireScope('organization', 'partner', 'system'),
+  // Same RBAC bar as the patch list it backs.
+  requirePermission(PERMISSIONS.DEVICES_READ.resource, PERMISSIONS.DEVICES_READ.action),
+  zValidator('param', patchIdParamSchema),
+  zValidator('query', listPatchDevicesSchema),
+  async (c) => {
+    const auth = c.get('auth');
+    const { id } = c.req.valid('param');
+    const query = c.req.valid('query');
+
+    if (query.orgId && !auth.canAccessOrg(query.orgId)) {
+      return c.json({ error: 'Access denied to this organization' }, 403);
+    }
+
+    const { page, limit, offset } = getPagination(query);
+    const deviceScope = resolveOutstandingDeviceScope(auth, {
+      orgId: query.orgId,
+      allowedSiteIds: (c.get('permissions') as UserPermissions | undefined)?.allowedSiteIds
+    });
+    // A patch none of the caller's devices has reported gets the same 404 as
+    // one that does not exist: the catalog is global, but which patches a
+    // tenant's devices carry is that tenant's data.
+    if (!deviceScope) {
+      return c.json({ error: 'Patch not found' }, 404);
+    }
+
+    const result = await listOutstandingDevices(id, deviceScope, { limit, offset });
+    if (!result.visible) {
+      return c.json({ error: 'Patch not found' }, 404);
+    }
+
+    return c.json({
+      data: result.devices,
+      pagination: { page, limit, total: result.total }
+    });
   }
 );
 

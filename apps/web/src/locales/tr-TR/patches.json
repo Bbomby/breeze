@@ -307,6 +307,7 @@
       "os": "İşletim Sistemi",
       "release": "Yayınla",
       "approval": "Onay",
+      "devices": "Cihazlar",
       "actions": "Eylemler"
     },
     "releaseUnknown": "Bilinmiyor",
@@ -319,6 +320,27 @@
       "badgeDevices_other": "Kurulum {{count}} cihazda başarısız oldu",
       "noReason": "Ajan bir neden bildirmedi",
       "failedAt": "Son kurulum denemesi başarısız oldu: {{when}}"
+    },
+    "outstandingDevices": {
+      "badge_one": "{{count}} cihaz",
+      "badge_other": "{{count}} cihaz",
+      "none": "Kapsamdaki hiçbir cihazın artık bu yamaya ihtiyacı yok",
+      "open": "{{title}} güncellemesine hâlâ ihtiyaç duyan cihazları göster",
+      "heading": "{{title}} güncellemesine hâlâ ihtiyaç duyan cihazlar",
+      "loading": "Cihazlar yükleniyor…",
+      "error": "Cihaz listesi yüklenemedi.",
+      "showing": "{{total}} cihazdan {{shown}} tanesi gösteriliyor",
+      "loadMore": "Daha fazla yükle",
+      "lastChecked": "Son denetim: {{when}}",
+      "status": {
+        "online": "Çevrimiçi",
+        "offline": "Çevrimdışı",
+        "maintenance": "Bakımda",
+        "decommissioned": "Kullanımdan kaldırıldı",
+        "quarantined": "Karantinada",
+        "updating": "Güncelleniyor",
+        "pending": "Beklemede"
+      }
     }
   },
   "patchesPage": {

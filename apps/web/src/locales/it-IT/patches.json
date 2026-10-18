@@ -307,6 +307,7 @@
       "os": "OS",
       "release": "Rilascio",
       "approval": "Approvazione",
+      "devices": "Dispositivi",
       "actions": "Azioni"
     },
     "releaseUnknown": "Sconosciuta",
@@ -319,6 +320,27 @@
       "badgeDevices_other": "Installazione non riuscita su {{count}} dispositivi",
       "noReason": "Nessun motivo segnalato dall'agente",
       "failedAt": "Ultimo tentativo di installazione non riuscito: {{when}}"
+    },
+    "outstandingDevices": {
+      "badge_one": "{{count}} dispositivo",
+      "badge_other": "{{count}} dispositivi",
+      "none": "Nessun dispositivo nell’ambito ha ancora bisogno di questa patch",
+      "open": "Mostra i dispositivi che hanno ancora bisogno di {{title}}",
+      "heading": "Dispositivi che hanno ancora bisogno di {{title}}",
+      "loading": "Caricamento dei dispositivi…",
+      "error": "Impossibile caricare l’elenco dei dispositivi.",
+      "showing": "{{shown}} di {{total}} visualizzati",
+      "loadMore": "Carica altri",
+      "lastChecked": "Ultimo controllo: {{when}}",
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "maintenance": "Manutenzione",
+        "decommissioned": "Dismesso",
+        "quarantined": "In quarantena",
+        "updating": "In aggiornamento",
+        "pending": "In attesa"
+      }
     }
   },
   "patchesPage": {

@@ -307,6 +307,7 @@
       "os": "OS",
       "release": "Liberar",
       "approval": "Aprobación",
+      "devices": "Dispositivos",
       "actions": "Acciones"
     },
     "releaseUnknown": "Desconocida",
@@ -319,6 +320,27 @@
       "badgeDevices_other": "La instalación falló en {{count}} dispositivos",
       "noReason": "El agente no informó ningún motivo",
       "failedAt": "El último intento de instalación falló: {{when}}"
+    },
+    "outstandingDevices": {
+      "badge_one": "{{count}} dispositivo",
+      "badge_other": "{{count}} dispositivos",
+      "none": "Ningún dispositivo en el alcance necesita aún este parche",
+      "open": "Mostrar los dispositivos que aún necesitan {{title}}",
+      "heading": "Dispositivos que aún necesitan {{title}}",
+      "loading": "Cargando dispositivos…",
+      "error": "No se pudo cargar la lista de dispositivos.",
+      "showing": "Mostrando {{shown}} de {{total}}",
+      "loadMore": "Cargar más",
+      "lastChecked": "Última comprobación: {{when}}",
+      "status": {
+        "online": "En línea",
+        "offline": "Sin conexión",
+        "maintenance": "Mantenimiento",
+        "decommissioned": "Dado de baja",
+        "quarantined": "En cuarentena",
+        "updating": "Actualizando",
+        "pending": "Pendiente"
+      }
     }
   },
   "patchesPage": {

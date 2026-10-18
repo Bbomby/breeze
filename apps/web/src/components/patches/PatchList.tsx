@@ -23,6 +23,7 @@ import { formatDateTime } from '@/lib/dateTimeFormat';
 import { ResponsiveTable, DataCard, CardField, CardActions } from '../shared/ResponsiveTable';
 import { FilterSelect } from '../shared/FilterSelect';
 import { usePatchSelection } from './usePatchSelection';
+import { PatchDevicesPopover, type LoadPatchDevices } from './PatchDevicesPopover';
 
 export type PatchSeverity = 'critical' | 'important' | 'moderate' | 'low' | 'unrated';
 export type PatchApprovalStatus = 'pending' | 'approved' | 'declined' | 'deferred';
@@ -50,6 +51,8 @@ export type Patch = {
   vendor?: string | null;
   cveIds?: string[];
   installFailure?: PatchInstallFailure;
+  /** Devices in the caller's scope that still need the patch (#8728). */
+  outstandingDeviceCount?: number;
 };
 
 type PatchListProps = {
@@ -68,6 +71,9 @@ type PatchListProps = {
   loading?: boolean;
   error?: string;
   onRetry?: () => void;
+  /** Loads the devices behind a row's outstanding count (#8728). The Devices
+   * column only renders when this is given — the ring view has no count. */
+  loadPatchDevices?: LoadPatchDevices;
 };
 
 const severityConfig: Record<PatchSeverity, { labelKey: string; color: string }> = {
@@ -167,7 +173,8 @@ export default function PatchList({
   initialPageSize = DEFAULT_PAGE_SIZE,
   loading,
   error,
-  onRetry
+  onRetry,
+  loadPatchDevices
 }: PatchListProps) {
   const { t } = useTranslation('patches');
   const [query, setQuery] = useState('');
@@ -404,6 +411,29 @@ export default function PatchList({
         <span className="break-words text-xs text-muted-foreground">{reason}</span>
         {patch.approvalStatus !== 'pending' && approvalBadge}
       </span>
+    );
+  };
+
+  const renderDevicesCell = (patch: Patch) => {
+    const count = patch.outstandingDeviceCount ?? 0;
+    if (!loadPatchDevices || count === 0) {
+      return (
+        <span
+          data-testid={`patch-row-${patch.id}-devices-none`}
+          title={t('patchList.outstandingDevices.none')}
+          className="text-muted-foreground"
+        >
+          —
+        </span>
+      );
+    }
+    return (
+      <PatchDevicesPopover
+        patchId={patch.id}
+        patchTitle={patch.title}
+        count={count}
+        loadDevices={loadPatchDevices}
+      />
     );
   };
 
@@ -740,13 +770,14 @@ export default function PatchList({
                     </th>
                   );
                 })}
+                {loadPatchDevices && <th className="px-4 py-3">{t('patchList.table.devices')}</th>}
                 <th className="px-4 py-3 text-right">{t('patchList.table.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {paginatedPatches.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  <td colSpan={loadPatchDevices ? 9 : 8} className="px-4 py-6 text-center text-sm text-muted-foreground">
                     {t('patchList.empty')}
                   </td>
                 </tr>
@@ -780,6 +811,7 @@ export default function PatchList({
                       <td className="px-4 py-3 text-muted-foreground">{patch.os}</td>
                       <td className="px-4 py-3 text-muted-foreground">{renderReleaseDate(patch)}</td>
                       <td className="px-4 py-3">{renderApprovalBadge(patch)}</td>
+                      {loadPatchDevices && <td className="px-4 py-3">{renderDevicesCell(patch)}</td>}
                       <td className="px-4 py-3">{renderRowActions(patch)}</td>
                     </tr>
                   );
@@ -831,6 +863,9 @@ export default function PatchList({
                         <span className="text-muted-foreground">{renderReleaseDate(patch)}</span>
                       </CardField>
                       <CardField label={t('patchList.table.approval')}>{renderApprovalBadge(patch)}</CardField>
+                      {loadPatchDevices && (
+                        <CardField label={t('patchList.table.devices')}>{renderDevicesCell(patch)}</CardField>
+                      )}
                     </div>
                     <CardActions>{renderRowActions(patch)}</CardActions>
                   </DataCard>

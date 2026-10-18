@@ -307,6 +307,7 @@
       "os": "Betriebssystem",
       "release": "Veröffentlichung",
       "approval": "Freigabe",
+      "devices": "Geräte",
       "actions": "Aktionen"
     },
     "releaseUnknown": "Unbekannt",
@@ -319,6 +320,27 @@
       "badgeDevices_other": "Installation auf {{count}} Geräten fehlgeschlagen",
       "noReason": "Kein Grund vom Agent gemeldet",
       "failedAt": "Letzter Installationsversuch fehlgeschlagen: {{when}}"
+    },
+    "outstandingDevices": {
+      "badge_one": "{{count}} Gerät",
+      "badge_other": "{{count}} Geräte",
+      "none": "Kein Gerät im Bereich benötigt diesen Patch noch",
+      "open": "Geräte anzeigen, die {{title}} noch benötigen",
+      "heading": "Geräte, die {{title}} noch benötigen",
+      "loading": "Geräte werden geladen…",
+      "error": "Die Geräteliste konnte nicht geladen werden.",
+      "showing": "{{shown}} von {{total}} angezeigt",
+      "loadMore": "Mehr laden",
+      "lastChecked": "Zuletzt geprüft: {{when}}",
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "maintenance": "Wartung",
+        "decommissioned": "Außer Betrieb",
+        "quarantined": "Unter Quarantäne",
+        "updating": "Wird aktualisiert",
+        "pending": "Ausstehend"
+      }
     }
   },
   "patchesPage": {

@@ -334,3 +334,15 @@ describe('normalizeRing — appRules (#8187)', () => {
     expect(normalizeRing({ id: 'r1', name: 'Pilot', appRules: { a: 1 } }).appRules).toEqual([]);
   });
 });
+
+describe('normalizePatch — outstanding device count (#8728)', () => {
+  it('reads outstandingDeviceCount, including 0', () => {
+    expect(normalizePatch({ id: 'p1', title: 'KB1', outstandingDeviceCount: 4 }, 0).outstandingDeviceCount).toBe(4);
+    expect(normalizePatch({ id: 'p1', title: 'KB1', outstandingDeviceCount: 0 }, 0).outstandingDeviceCount).toBe(0);
+  });
+
+  it('leaves it undefined when the endpoint does not supply a number (e.g. the ring list)', () => {
+    expect(normalizePatch({ id: 'p1', title: 'KB1' }, 0).outstandingDeviceCount).toBeUndefined();
+    expect(normalizePatch({ id: 'p1', title: 'KB1', outstandingDeviceCount: '3' }, 0).outstandingDeviceCount).toBeUndefined();
+  });
+});

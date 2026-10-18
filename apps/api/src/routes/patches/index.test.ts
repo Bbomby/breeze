@@ -164,6 +164,15 @@ vi.mock('../../services/patchInstallFailures', () => ({
   loadFailedInstallPairs: vi.fn(async () => [])
 }));
 
+// #8728 outstanding-device overlay + drill-down — real SQL and scoping are
+// covered by __tests__/integration/patchOutstandingDevices.integration.test.ts.
+const OUTSTANDING_SCOPE = vi.hoisted(() => [{ op: 'outstandingScope' }]);
+vi.mock('../../services/patchOutstandingDevices', () => ({
+  resolveOutstandingDeviceScope: vi.fn(() => OUTSTANDING_SCOPE),
+  loadOutstandingDeviceCounts: vi.fn(async () => new Map()),
+  listOutstandingDevices: vi.fn(async () => ({ visible: true, devices: [], total: 0 }))
+}));
+
 // W06 image term — real SQL is covered by
 // services/workloads/imageCompliance.integration.test.ts; no workload rows here.
 vi.mock('../../services/workloads/imageCompliance', async (importOriginal) => ({
@@ -245,6 +254,11 @@ import { queueCommandForExecution } from '../../services/commandQueue';
 import { enqueuePatchComplianceReport } from '../../jobs/patchComplianceReportWorker';
 import { writeRouteAudit } from '../../services/auditEvents';
 import { loadPatchInstallFailures } from '../../services/patchInstallFailures';
+import {
+  listOutstandingDevices,
+  loadOutstandingDeviceCounts,
+  resolveOutstandingDeviceScope
+} from '../../services/patchOutstandingDevices';
 // Real implementations (the mock above spreads the actual module). Fixtures
 // below must therefore carry a fingerprint the real decoder accepts.
 import {
@@ -579,6 +593,156 @@ describe('patch routes', () => {
     const body = await res.json();
     expect(body.data[0].installFailure).toEqual(failure);
     expect(vi.mocked(loadPatchInstallFailures)).toHaveBeenCalledWith([PATCH_ID], { orgId: undefined });
+  });
+
+  describe('outstanding device count (#8728)', () => {
+    const OTHER_PATCH_ID = '88888888-8888-4888-8888-888888888888';
+    const listRow = (id: string) => ({
+      id,
+      title: `Patch ${id.slice(0, 4)}`,
+      description: null,
+      source: 'microsoft',
+      severity: 'important',
+      category: 'security',
+      version: null,
+      osTypes: ['windows'],
+      inferredOs: null,
+      cveIds: [],
+      releaseDate: null,
+      requiresReboot: false,
+      downloadSizeMb: null,
+      createdAt: new Date('2026-08-01T00:00:00.000Z')
+    });
+
+    function mockListPage() {
+      vi.mocked(db.select)
+        .mockReturnValueOnce(selectPatchListResult([listRow(PATCH_ID), listRow(OTHER_PATCH_ID)]) as any)
+        .mockReturnValueOnce(selectWhereResult([{ count: 2 }]) as any)
+        .mockReturnValueOnce(selectSourceCountsResult() as any);
+    }
+
+    it('overlays one integer per row from a single per-page load, 0 when absent', async () => {
+      vi.mocked(loadOutstandingDeviceCounts).mockResolvedValueOnce(new Map([[PATCH_ID, 7]]));
+      mockListPage();
+
+      const res = await app.request('/patches', { headers: { Authorization: 'Bearer token' } });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data[0].outstandingDeviceCount).toBe(7);
+      expect(body.data[1].outstandingDeviceCount).toBe(0);
+      expect(vi.mocked(loadOutstandingDeviceCounts)).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(loadOutstandingDeviceCounts)).toHaveBeenCalledWith(
+        [PATCH_ID, OTHER_PATCH_ID],
+        OUTSTANDING_SCOPE
+      );
+      // Scoped by the caller's auth; ?orgId= narrowing is covered against real
+      // Postgres in patchOutstandingDevices.integration.test.ts.
+      expect(vi.mocked(resolveOutstandingDeviceScope)).toHaveBeenCalledWith(
+        expect.objectContaining({ orgCondition: expect.any(Function) }),
+        expect.objectContaining({ orgId: undefined })
+      );
+    });
+
+    it('reports 0 for every row without querying when the caller can see no devices', async () => {
+      vi.mocked(resolveOutstandingDeviceScope).mockReturnValueOnce(null);
+      mockListPage();
+
+      const res = await app.request('/patches', { headers: { Authorization: 'Bearer token' } });
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.map((p: { outstandingDeviceCount: number }) => p.outstandingDeviceCount)).toEqual([0, 0]);
+      expect(vi.mocked(loadOutstandingDeviceCounts)).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('GET /patches/:id/devices (#8728)', () => {
+    const device = {
+      deviceId: DEVICE_A,
+      hostname: 'laptop-a',
+      status: 'online',
+      lastCheckedAt: '2026-10-01T12:00:00.000Z'
+    };
+
+    it('returns the outstanding devices with default pagination', async () => {
+      vi.mocked(listOutstandingDevices).mockResolvedValueOnce({ visible: true, devices: [device], total: 1 });
+
+      const res = await app.request(`/patches/${PATCH_ID}/devices`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({
+        data: [device],
+        pagination: { page: 1, limit: 50, total: 1 }
+      });
+      expect(vi.mocked(listOutstandingDevices)).toHaveBeenCalledWith(PATCH_ID, OUTSTANDING_SCOPE, {
+        limit: 50,
+        offset: 0
+      });
+    });
+
+    it('caps the page size at 200 and turns page into an offset', async () => {
+      const res = await app.request(`/patches/${PATCH_ID}/devices?limit=1000&page=3`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(listOutstandingDevices)).toHaveBeenCalledWith(PATCH_ID, OUTSTANDING_SCOPE, {
+        limit: 200,
+        offset: 400
+      });
+    });
+
+    it('returns 404 when the patch is not visible in the caller\'s scope', async () => {
+      vi.mocked(listOutstandingDevices).mockResolvedValueOnce({ visible: false, devices: [], total: 0 });
+
+      const res = await app.request(`/patches/${PATCH_ID}/devices`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: 'Patch not found' });
+    });
+
+    it('returns 404 without querying when the caller can see no devices', async () => {
+      vi.mocked(resolveOutstandingDeviceScope).mockReturnValueOnce(null);
+
+      const res = await app.request(`/patches/${PATCH_ID}/devices`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(404);
+      expect(vi.mocked(listOutstandingDevices)).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 for an ?orgId= the caller cannot access', async () => {
+      const res = await app.request(`/patches/${PATCH_ID}/devices?orgId=${BLOCKED_ORG_ID}`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(403);
+      expect(vi.mocked(listOutstandingDevices)).not.toHaveBeenCalled();
+    });
+
+    it('denies the device list without devices:read', async () => {
+      mockAuthState.permissions = [{ resource: 'patches', action: 'read' }];
+
+      const res = await app.request(`/patches/${PATCH_ID}/devices`, {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('rejects a non-uuid patch id with 400', async () => {
+      const res = await app.request('/patches/not-a-uuid/devices', {
+        headers: { Authorization: 'Bearer token' }
+      });
+
+      expect(res.status).toBe(400);
+    });
   });
 
   it('defaults to newest-first (desc createdAt) when no sort params are supplied', async () => {

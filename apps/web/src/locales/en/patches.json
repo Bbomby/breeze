@@ -307,6 +307,7 @@
       "os": "OS",
       "release": "Release",
       "approval": "Approval",
+      "devices": "Devices",
       "actions": "Actions"
     },
     "releaseUnknown": "Unknown",
@@ -319,6 +320,27 @@
       "badgeDevices_other": "Install failed on {{count}} devices",
       "noReason": "No reason reported by the agent",
       "failedAt": "Last install attempt failed: {{when}}"
+    },
+    "outstandingDevices": {
+      "badge_one": "{{count}} device",
+      "badge_other": "{{count}} devices",
+      "none": "No device in scope still needs this patch",
+      "open": "Show devices that still need {{title}}",
+      "heading": "Devices that still need {{title}}",
+      "loading": "Loading devices…",
+      "error": "Couldn't load the device list.",
+      "showing": "Showing {{shown}} of {{total}}",
+      "loadMore": "Load more",
+      "lastChecked": "Last checked: {{when}}",
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "maintenance": "Maintenance",
+        "decommissioned": "Decommissioned",
+        "quarantined": "Quarantined",
+        "updating": "Updating",
+        "pending": "Pending"
+      }
     }
   },
   "patchesPage": {
