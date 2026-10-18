@@ -593,6 +593,63 @@ describe('PatchList outstanding devices column (#8728)', () => {
     await waitFor(() => expect(within(popover).getByText('host-1')).toBeTruthy());
   });
 
+  it('retries page 1, not the next page, after a reopen whose first load fails', async () => {
+    const loadPatchDevices = vi.fn()
+      .mockResolvedValueOnce({ devices: [device(1)], total: 3 })
+      .mockResolvedValueOnce({ devices: [device(2)], total: 3 })
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce({ devices: [device(1)], total: 3 });
+    render(
+      <PatchList
+        patches={[makePatch({ id: PATCH_ID, outstandingDeviceCount: 3 })]}
+        loadPatchDevices={loadPatchDevices}
+      />
+    );
+    const trigger = within(screen.getByTestId('responsive-table-desktop')).getByTestId(`patch-row-${PATCH_ID}-devices`);
+
+    fireEvent.click(trigger);
+    let popover = await screen.findByTestId('patch-devices-popover');
+    await waitFor(() => expect(within(popover).getByText('host-1')).toBeTruthy());
+    fireEvent.click(within(popover).getByTestId('patch-devices-load-more'));
+    await waitFor(() => expect(within(popover).getByText('host-2')).toBeTruthy());
+
+    fireEvent.click(trigger); // close
+    await waitFor(() => expect(screen.queryByTestId('patch-devices-popover')).toBeNull());
+    fireEvent.click(trigger); // reopen: page-1 load rejects
+    popover = await screen.findByTestId('patch-devices-popover');
+    fireEvent.click(await within(popover).findByTestId('patch-devices-retry'));
+
+    await waitFor(() => expect(loadPatchDevices).toHaveBeenCalledTimes(4));
+    expect(loadPatchDevices.mock.calls.map((call) => call[1])).toEqual([1, 2, 1, 1]);
+    await waitFor(() => expect(within(popover).getByText('host-1')).toBeTruthy());
+    expect(within(popover).queryByText('host-2')).toBeNull();
+  });
+
+  it('ignores a response that lands after the popover was closed and reopened', async () => {
+    let resolveStale: (value: { devices: ReturnType<typeof device>[]; total: number }) => void = () => {};
+    const loadPatchDevices = vi.fn()
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveStale = resolve; }))
+      .mockResolvedValueOnce({ devices: [device(2)], total: 1 });
+    render(
+      <PatchList
+        patches={[makePatch({ id: PATCH_ID, outstandingDeviceCount: 1 })]}
+        loadPatchDevices={loadPatchDevices}
+      />
+    );
+    const trigger = within(screen.getByTestId('responsive-table-desktop')).getByTestId(`patch-row-${PATCH_ID}-devices`);
+
+    fireEvent.click(trigger); // open: first load hangs
+    fireEvent.click(trigger); // close
+    fireEvent.click(trigger); // reopen: second load resolves
+    const popover = await screen.findByTestId('patch-devices-popover');
+    await waitFor(() => expect(within(popover).getByText('host-2')).toBeTruthy());
+
+    resolveStale({ devices: [device(9)], total: 1 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(within(popover).queryByText('host-9')).toBeNull();
+    expect(within(popover).getByText('host-2')).toBeTruthy();
+  });
+
   it('closes on Escape', async () => {
     render(
       <PatchList

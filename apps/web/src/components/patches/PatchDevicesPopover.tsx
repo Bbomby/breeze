@@ -46,23 +46,37 @@ export function PatchDevicesPopover({ patchId, patchTitle, count, loadDevices }:
   const popoverRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<CSSProperties>({ position: 'fixed', top: 0, left: 0 });
 
+  // Only the newest load may write state: a response for a request started
+  // before a close/reopen (or superseded by a retry) is dropped.
+  const requestRef = useRef(0);
+
   const loadPage = useCallback(async (next: number) => {
+    const request = ++requestRef.current;
     setLoading(true);
     setFailed(false);
     try {
       const result = await loadDevices(patchId, next);
+      if (request !== requestRef.current) return;
       setDevices((prev) => (next === 1 ? result.devices : [...prev, ...result.devices]));
       setTotal(result.total);
       setPage(next);
     } catch {
+      if (request !== requestRef.current) return;
       setFailed(true);
     } finally {
-      setLoading(false);
+      if (request === requestRef.current) setLoading(false);
     }
   }, [loadDevices, patchId]);
 
+  const close = useCallback(() => {
+    requestRef.current++;
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
   const toggle = () => {
     if (open) {
+      requestRef.current++;
       setOpen(false);
       return;
     }
@@ -70,19 +84,17 @@ export function PatchDevicesPopover({ patchId, patchTitle, count, loadDevices }:
     // Reload from page 1 on every open: the list may have been refreshed since.
     setDevices([]);
     setTotal(null);
+    setPage(0);
+    setFailed(false);
     void loadPage(1);
   };
-
-  const close = useCallback(() => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     if (!open) return;
     const onMouseDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (triggerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      requestRef.current++;
       setOpen(false);
     };
     // On the document, not the popover: focus stays on the trigger after a
@@ -158,7 +170,7 @@ export function PatchDevicesPopover({ patchId, patchTitle, count, loadDevices }:
               <span>{t('patchList.outstandingDevices.error')}</span>
               <button
                 type="button"
-                onClick={() => void loadPage(Math.max(page, 0) + 1)}
+                onClick={() => void loadPage(devices.length === 0 ? 1 : page + 1)}
                 data-testid="patch-devices-retry"
                 className="rounded-md border border-destructive/40 px-2 py-1 text-xs font-medium hover:bg-destructive/10"
               >
