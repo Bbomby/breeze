@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '../../lib/validation';
-import { db, runAfterDbContextCommit } from '../../db';
+import { db, runAfterDbContextCommit, withDbTransaction } from '../../db';
 import {
   authMiddleware,
   requireInteractiveSession,
@@ -43,7 +43,7 @@ const DEVICE_OFFLINE_BODY = {
   code: 'DEVICE_OFFLINE',
 } as const;
 
-/** Thrown inside the grant transaction so it rolls back as a refusal, not a failure. */
+/** Thrown inside the savepoint so it rolls back (queued row included) as a refusal, not a failure. */
 class ForceRebootStepUpConsumedError extends Error {}
 
 const forceRebootSchema = z.object({
@@ -68,12 +68,14 @@ const forceRebootSchema = z.object({
  *     whatever the 2FA setting), devices:execute, satisfied MFA;
  *   - a single-use `device_force_reboot` grant bound to THIS device.
  *
- * Order: every check that can refuse runs BEFORE the grant is consumed, so a
- * refusal leaves it unspent and the technician can retry without a second
- * factor prompt. Then, in one transaction, the actor's assurance is locked
- * and the grant consumed; the command is queued through the normal enqueue
- * seam, so the power-state barrier still holds it behind in-flight work and
- * the 15-minute live_only window expires it rather than letting it fire late.
+ * Order: every check that can refuse, the enqueue seam's own included, runs
+ * BEFORE the grant is consumed, so a refusal leaves it unspent and the
+ * technician can retry without a second factor prompt. In one savepoint the
+ * actor's assurance is locked, the command is queued through the normal
+ * enqueue seam (so the power-state barrier still holds it behind in-flight
+ * work, and the 15-minute live_only window expires it rather than letting it
+ * fire late), and the grant is consumed last; a failed consume rolls the row
+ * back.
  */
 forceRebootRoutes.post(
   '/:id/force-reboot',
@@ -158,28 +160,40 @@ forceRebootRoutes.post(
       }, false), 403);
     }
 
-    if (grantBinding) {
-      const binding = grantBinding;
-      try {
-        await db.transaction(async (tx) => {
-          if (!(await lockActorAssurance(tx, auth, binding)) || !(await consumeStepUpGrant(stepUpGrant!, binding))) {
-            throw new ForceRebootStepUpConsumedError();
-          }
+    // One savepoint, in this order: lock the actor's assurance (SHARE on the
+    // users row, held until commit), queue the row, THEN consume the grant.
+    //   - The grant is a Redis GETDEL, outside Postgres, so a rollback cannot
+    //     un-spend it. Consuming last is what keeps it unspent when the enqueue
+    //     seam refuses (an offline race, trust, a parked device).
+    //   - A consume that fails (replayed or revoked grant) throws, and the
+    //     savepoint rolls the queued row back: no command without a spent grant.
+    //   - The actor lock covers the insert, so a session revoke or MFA reset
+    //     cannot land between the check and the row existing.
+    // deferDelivery: the socket push runs only after the request commits.
+    let res: Awaited<ReturnType<typeof dispatchDeviceCommand>>;
+    try {
+      res = await withDbTransaction(async () => {
+        if (grantBinding && !(await lockActorAssurance(db, auth, grantBinding))) {
+          throw new ForceRebootStepUpConsumedError();
+        }
+        const dispatched = await dispatchDeviceCommand({
+          deviceId,
+          type: CommandTypes.FORCE_REBOOT,
+          // The agent derives the argv itself (ForceRebootArgv); nothing to carry.
+          payload: {},
+          userId: auth.user.id,
+          deferDelivery: true,
         });
-      } catch (error) {
-        if (error instanceof ForceRebootStepUpConsumedError) return c.json(STEP_UP_REQUIRED_BODY, 403);
-        throw error;
-      }
+        if (!dispatched.ok) return dispatched;
+        if (grantBinding && !(await consumeStepUpGrant(stepUpGrant!, grantBinding))) {
+          throw new ForceRebootStepUpConsumedError();
+        }
+        return dispatched;
+      });
+    } catch (error) {
+      if (error instanceof ForceRebootStepUpConsumedError) return c.json(STEP_UP_REQUIRED_BODY, 403);
+      throw error;
     }
-
-    const res = await dispatchDeviceCommand({
-      deviceId,
-      type: CommandTypes.FORCE_REBOOT,
-      // The agent derives the argv itself (ForceRebootArgv); nothing to carry.
-      payload: {},
-      userId: auth.user.id,
-      deferDelivery: true,
-    });
     if (!res.ok) {
       if (res.code === 'device_offline') return c.json(DEVICE_OFFLINE_BODY, 409);
       if (res.code === 'device_pending_assignment') return c.json({ error: res.error, code: res.code }, 409);

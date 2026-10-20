@@ -25,6 +25,7 @@ vi.mock('../../db', () => ({
   runAfterDbContextCommit: vi.fn(),
   withDbAccessContext: vi.fn(async (_ctx: unknown, fn: () => Promise<unknown>) => fn()),
   withSystemDbAccessContext: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+  withDbTransaction: vi.fn(async (fn: () => Promise<unknown>) => fn()),
   db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), transaction: vi.fn() },
 }));
 
@@ -83,7 +84,7 @@ vi.mock('../../services/mfaStepUpGrant', async (importOriginal) => {
 vi.mock('../../services/authEpochs', () => ({ getUserEpochs: vi.fn(async () => ({ authEpoch: 1, mfaEpoch: 1 })) }));
 
 import { forceRebootRoutes } from './forceReboot';
-import { db, runAfterDbContextCommit } from '../../db';
+import { runAfterDbContextCommit, withDbTransaction } from '../../db';
 import { getDeviceWithOrgCheck } from './helpers';
 import { writeRouteAudit } from '../../services/auditEvents';
 import { TrustDeniedError } from '../../services/partnerTrust.commands';
@@ -141,7 +142,7 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     vi.mocked(validateStepUpGrant).mockReset().mockResolvedValue(true);
     vi.mocked(consumeStepUpGrant).mockReset().mockResolvedValue(true);
     vi.mocked(lockActorAssurance).mockReset().mockResolvedValue(true);
-    vi.mocked(db.transaction).mockReset().mockImplementation((async (fn: (tx: unknown) => unknown) => fn({})) as never);
+    vi.mocked(withDbTransaction).mockReset().mockImplementation((async (fn: () => Promise<unknown>) => fn()) as never);
     assertDeviceExecuteAllowedMock.mockReset().mockResolvedValue(undefined);
     dispatchDeviceCommandMock.mockReset().mockImplementation(async ({ deviceId, type }: { deviceId: string; type: string }) => ({
       ok: true,
@@ -174,9 +175,13 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
       userId: 'user-123',
       deferDelivery: true,
     }));
-    // The grant is spent before the command exists.
-    expect(vi.mocked(consumeStepUpGrant).mock.invocationCallOrder[0])
-      .toBeLessThan(dispatchDeviceCommandMock.mock.invocationCallOrder[0]!);
+    // One savepoint: lock the actor, queue the row, consume the grant LAST
+    // (Redis GETDEL cannot be rolled back, so nothing that can refuse may
+    // follow it).
+    expect(withDbTransaction).toHaveBeenCalledTimes(1);
+    const order = (fn: { mock: { invocationCallOrder: number[] } }) => fn.mock.invocationCallOrder[0]!;
+    expect(order(vi.mocked(lockActorAssurance))).toBeLessThan(order(dispatchDeviceCommandMock));
+    expect(order(dispatchDeviceCommandMock)).toBeLessThan(order(vi.mocked(consumeStepUpGrant)));
 
     expect(writeRouteAudit).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       orgId: 'org-123',
@@ -262,13 +267,18 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     expectNoEffect();
   });
 
-  it('refuses a replayed (already consumed) grant without queueing', async () => {
+  it('refuses a replayed (already consumed) grant and rolls the queued row back', async () => {
     vi.mocked(consumeStepUpGrant).mockResolvedValue(false);
+    let savepoint: Promise<unknown> | undefined;
+    vi.mocked(withDbTransaction).mockImplementation(((fn: () => Promise<unknown>) => (savepoint = fn())) as never);
     const res = await post();
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({ error: 'Step-up required', code: 'STEP_UP_REQUIRED' });
-    expect(dispatchDeviceCommandMock).not.toHaveBeenCalled();
+    // The savepoint body THREW (so the real savepoint rolls back the row it
+    // queued); it did not return normally.
+    await expect(savepoint).rejects.toBeInstanceOf(Error);
     expect(writeRouteAudit).not.toHaveBeenCalled();
+    expect(runAfterDbContextCommit).not.toHaveBeenCalled();
   });
 
   it('refuses when the actor assurance moved since the grant (password/MFA change, sign-out)', async () => {
@@ -276,6 +286,7 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     const res = await post();
     expect(res.status).toBe(403);
     expect(dispatchDeviceCommandMock).not.toHaveBeenCalled();
+    expect(consumeStepUpGrant).not.toHaveBeenCalled();
   });
 
   it('needs no grant when 2FA is disabled for the deployment, but still needs a human session', async () => {
@@ -284,6 +295,8 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     expect(res.status).toBe(201);
     expect(validateStepUpGrant).not.toHaveBeenCalled();
     expect(consumeStepUpGrant).not.toHaveBeenCalled();
+    expect(lockActorAssurance).not.toHaveBeenCalled();
+    expect(withDbTransaction).toHaveBeenCalledTimes(1);
 
     authState.principalKind = 'api_key';
     expect((await post({})).status).toBe(403);
@@ -348,11 +361,12 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     ['device_offline', 409, 'DEVICE_OFFLINE'],
     ['device_pending_assignment', 409, undefined],
     ['device_decommissioned', 400, undefined],
-  ] as const)('maps a %s refusal from the enqueue seam', async (code, status, bodyCode) => {
+  ] as const)('maps a %s refusal from the enqueue seam, leaving the grant unspent', async (code, status, bodyCode) => {
     dispatchDeviceCommandMock.mockResolvedValue({ ok: false, code, error: 'refused' });
     const res = await post();
     expect(res.status).toBe(status);
     if (bodyCode) expect(await res.json()).toMatchObject({ code: bodyCode });
+    expect(consumeStepUpGrant).not.toHaveBeenCalled();
     expect(writeRouteAudit).not.toHaveBeenCalled();
   });
 });

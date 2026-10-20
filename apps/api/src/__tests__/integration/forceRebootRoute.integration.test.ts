@@ -21,7 +21,7 @@ import './setup';
 
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { getTestDb } from './setup';
 import { authMiddleware } from '../../middleware/auth';
@@ -33,6 +33,25 @@ import { createAccessToken, type TokenPayload } from '../../services/jwt';
 import { forceRebootResourceDigest, mintStepUpGrant } from '../../services/mfaStepUpGrant';
 import { MIN_AGENT_VERSION_FORCE_REBOOT } from '../../services/forceReboot';
 import { setupTestEnvironment, type TestEnvironment } from './db-utils';
+
+// The REAL enqueue seam, wrapped so one test can make it refuse exactly once
+// after preflight passed (the device dropping offline in between). Every other
+// call goes straight through.
+const { dispatchOverride } = vi.hoisted(() => ({ dispatchOverride: { next: null as null | Record<string, unknown> } }));
+vi.mock('../../services/dispatchDeviceCommand', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../services/dispatchDeviceCommand')>();
+  return {
+    ...actual,
+    dispatchDeviceCommand: async (input: Parameters<typeof actual.dispatchDeviceCommand>[0]) => {
+      const forced = dispatchOverride.next;
+      if (forced) {
+        dispatchOverride.next = null;
+        return forced as never;
+      }
+      return actual.dispatchDeviceCommand(input);
+    },
+  };
+});
 
 const AGENT_CAPS = { peripheralPolicyProtocolVersion: 2, rollbackProtocolVersion: 1, pamLifetimeProtocolVersion: 2 } as const;
 const LIVE_ONLY_MS = 15 * 60 * 1000;
@@ -229,5 +248,34 @@ describe('#8729 — POST /devices/:id/force-reboot (real grant, real claim path)
     const res = await post(`/devices/${deviceId}/commands`, { type: 'force_reboot' });
     expect(res.status).toBe(400);
     expect(await forceRebootRows(deviceId)).toHaveLength(0);
+  });
+
+  it('leaves the grant unspent when the enqueue seam refuses after preflight (offline race)', async () => {
+    // The device passes preflight as online, then drops offline before the
+    // enqueue seam reads it. That refusal must not spend the real grant.
+    const deviceId = await seedDevice();
+    const grant = await mintFor(deviceId);
+    dispatchOverride.next = { ok: false, code: 'device_offline', error: 'Device is offline, cannot execute command' };
+
+    const refused = await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant });
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ code: 'DEVICE_OFFLINE' });
+    expect(await forceRebootRows(deviceId)).toHaveLength(0);
+
+    // The same grant still works.
+    expect((await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant })).status).toBe(201);
+    expect(await forceRebootRows(deviceId)).toHaveLength(1);
+  });
+
+  it('rolls the queued row back when the grant turns out to be spent (consumed last)', async () => {
+    const deviceId = await seedDevice();
+    const grant = await mintFor(deviceId);
+    expect((await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant })).status).toBe(201);
+    // Second use: validation passes only if the grant still exists, so spend
+    // it via the first call and confirm the replay leaves exactly one row; the
+    // replay's own insert must have been rolled back with its savepoint.
+    const replay = await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant });
+    expect(replay.status).toBe(403);
+    expect(await forceRebootRows(deviceId)).toHaveLength(1);
   });
 });
