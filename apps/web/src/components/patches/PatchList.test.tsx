@@ -650,6 +650,25 @@ describe('PatchList outstanding devices column (#8728)', () => {
     expect(within(popover).getByText('host-2')).toBeTruthy();
   });
 
+  // #9298 follow-up: device status labels come from devices.json
+  // (deviceList.statuses.full), the same wording as the device list.
+  it('labels device status with the device list wording', async () => {
+    render(
+      <PatchList
+        patches={[makePatch({ id: PATCH_ID, outstandingDeviceCount: 2 })]}
+        loadPatchDevices={vi.fn().mockResolvedValue({
+          devices: [device(1), { ...device(2), status: 'decommissioned' }],
+          total: 2,
+        })}
+      />
+    );
+    fireEvent.click(within(screen.getByTestId('responsive-table-desktop')).getByTestId(`patch-row-${PATCH_ID}-devices`));
+    const popover = await screen.findByTestId('patch-devices-popover');
+    await waitFor(() => expect(within(popover).getByText('host-2')).toBeTruthy());
+    expect(within(popover).getByText('Online')).toBeTruthy();
+    expect(within(popover).getByText('Removed')).toBeTruthy();
+  });
+
   it('closes on Escape', async () => {
     render(
       <PatchList
