@@ -54,6 +54,7 @@ var handlerRegistry = map[string]CommandHandler{
 	tools.CmdShutdown:       handleShutdown,
 	tools.CmdLock:           handleLock,
 	tools.CmdRebootSafeMode: handleRebootSafeMode,
+	tools.CmdForceReboot:    handleForceReboot,
 	tools.CmdWakeOnLan:      handleWakeOnLan,
 
 	// On-demand inventory refresh
@@ -243,6 +244,10 @@ func handleRegistryKeyDelete(_ *Heartbeat, cmd Command) tools.CommandResult {
 
 func handleReboot(_ *Heartbeat, cmd Command) tools.CommandResult {
 	return tools.Reboot(cmd.Payload)
+}
+
+func handleForceReboot(_ *Heartbeat, cmd Command) tools.CommandResult {
+	return tools.ForceReboot(cmd.Payload)
 }
 
 func handleShutdown(_ *Heartbeat, cmd Command) tools.CommandResult {
