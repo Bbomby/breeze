@@ -72,7 +72,7 @@ local development. After copying it, change these three:
 |---|---|---|---|
 | `NODE_ENV` | `production` | `development` | In production mode `pnpm db:migrate` refuses to create the default `admin@breeze.local` account and fails with *Production bootstrap requires BREEZE_BOOTSTRAP_ADMIN_EMAIL and BREEZE_BOOTSTRAP_ADMIN_PASSWORD*. |
 | `FORCE_HTTPS` | `true` | `false` | With it on, the API refuses to start unless `PUBLIC_API_URL` is an `https://` URL; local dev is plain HTTP. |
-| `REDIS_URL` | `redis://:${REDIS_PASSWORD}@localhost:6379` | `redis://:<your REDIS_PASSWORD>@localhost:6379` | Docker Compose expands `${REDIS_PASSWORD}`, but the API reads `.env` with dotenv, which does not, so Redis rejects the login (`WRONGPASS`). Write the password into the URL. |
+| `REDIS_URL` | `redis://:${REDIS_PASSWORD}@localhost:6379` | `redis://:<your REDIS_PASSWORD>@localhost:6379` | Docker Compose expands `${REDIS_PASSWORD}`, but the API reads `.env` with dotenv, which does not, so Redis rejects the login (`WRONGPASS`). Write the password into the URL, percent-encoding any `@`, `:`, `/`, `#` or `?` in it (a password from `openssl rand -hex 32` needs none). |
 
 Two more look like they need changing but do not:
 

@@ -143,7 +143,8 @@ pnpm install
 cp .env.example .env
 ```
 
-`.env.example` is the production template. Generate the three required secrets and change the
+`.env.example` is the production template. Generate the three required secrets as shown in
+[CONTRIBUTING.md → Development Setup](../../CONTRIBUTING.md#development-setup), then change the
 local-development values listed in [CONTRIBUTING.md → Local `.env` values](../../CONTRIBUTING.md#local-env-values)
 (`NODE_ENV`, `FORCE_HTTPS`, `REDIS_URL`). That section is the one place these are kept, so the two
 guides cannot drift apart.
