@@ -655,10 +655,10 @@ describe('PatchList outstanding devices column (#8728)', () => {
   it('labels device status with the device list wording', async () => {
     render(
       <PatchList
-        patches={[makePatch({ id: PATCH_ID, outstandingDeviceCount: 2 })]}
+        patches={[makePatch({ id: PATCH_ID, outstandingDeviceCount: 3 })]}
         loadPatchDevices={vi.fn().mockResolvedValue({
-          devices: [device(1), { ...device(2), status: 'decommissioned' }],
-          total: 2,
+          devices: [device(1), { ...device(2), status: 'decommissioned' }, { ...device(3), status: 'not-a-status' }],
+          total: 3,
         })}
       />
     );
@@ -667,6 +667,9 @@ describe('PatchList outstanding devices column (#8728)', () => {
     await waitFor(() => expect(within(popover).getByText('host-2')).toBeTruthy());
     expect(within(popover).getByText('Online')).toBeTruthy();
     expect(within(popover).getByText('Removed')).toBeTruthy();
+    // An unrecognised status gets the device list's "Unknown", never the raw value.
+    expect(within(popover).getByText('Unknown')).toBeTruthy();
+    expect(within(popover).queryByText('not-a-status')).toBeNull();
   });
 
   it('closes on Escape', async () => {

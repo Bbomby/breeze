@@ -332,6 +332,44 @@ describe('#8728 follow-up — a parked device is excluded from the count and the
     await getTestDb().update(users).set({ isPlatformAdmin: true }).where(eq(users.id, client.env.user.id));
   });
 
+  async function seedParkedDevice(): Promise<{ deviceId: string; holdingOrgId: string }> {
+    const holding = await createOrganization({ partnerId: client.env.partner.id, type: 'unassigned_pool' });
+    const holdingSite = await createSite({ orgId: holding.id });
+    // Only enrollment admission may create a device in a holding org.
+    const deviceId = await getTestDb().transaction(async (tx) => {
+      await tx.execute(sql`SELECT set_config('breeze.parked_device_admission', 'enrollment', true)`);
+      const [row] = await tx
+        .insert(devices)
+        .values({
+          orgId: holding.id,
+          siteId: holdingSite.id,
+          agentId: `agent-8728-parked-${randomUUID()}`,
+          hostname: 'parked-only-laptop',
+          osType: 'windows',
+          osVersion: '11',
+          architecture: 'x86_64',
+          agentVersion: '0.0.0-test',
+          status: 'online',
+          enrolledAt: new Date(),
+        })
+        .returning({ id: devices.id });
+      return row!.id;
+    });
+    return { deviceId, holdingOrgId: holding.id };
+  }
+
+  it('answers a patch present only on a parked device like a patch that does not exist (404)', async () => {
+    const patchId = await seedPatch();
+    const { deviceId, holdingOrgId } = await seedParkedDevice();
+    await seedDevicePatch(holdingOrgId, deviceId, patchId, 'pending');
+
+    const res = await client.get(`/patches/${patchId}/devices`);
+    const noSuch = await client.get(`/patches/${randomUUID()}/devices`);
+    expect(res.status).toBe(404);
+    expect(noSuch.status).toBe(404);
+    expect(await res.json()).toEqual(await noSuch.json());
+  });
+
   it('counts and names only the managed device, not the one parked in the holding org', async () => {
     const patchId = await seedPatch();
     const orgId = client.env.organization.id;
