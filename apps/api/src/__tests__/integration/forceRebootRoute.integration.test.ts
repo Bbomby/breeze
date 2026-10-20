@@ -37,7 +37,13 @@ import { setupTestEnvironment, type TestEnvironment } from './db-utils';
 // The REAL enqueue seam, wrapped so one test can run a hook exactly once just
 // before it (the device dropping offline after the route's own check). Every
 // call still goes through the real seam.
-const { dispatchOverride } = vi.hoisted(() => ({ dispatchOverride: { before: null as null | (() => Promise<void>) } }));
+const { dispatchOverride } = vi.hoisted(() => ({
+  dispatchOverride: {
+    before: null as null | (() => Promise<void>),
+    // Holds every caller until `size` of them have arrived, then releases all.
+    barrier: null as null | { size: number; arrived: number; release: () => void; ready: Promise<void> },
+  },
+}));
 vi.mock('../../services/dispatchDeviceCommand', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/dispatchDeviceCommand')>();
   return {
@@ -48,7 +54,14 @@ vi.mock('../../services/dispatchDeviceCommand', async (importOriginal) => {
         dispatchOverride.before = null;
         await before();
       }
-      return actual.dispatchDeviceCommand(input);
+      const result = await actual.dispatchDeviceCommand(input);
+      const barrier = dispatchOverride.barrier;
+      if (barrier) {
+        barrier.arrived += 1;
+        if (barrier.arrived >= barrier.size) barrier.release();
+        await barrier.ready;
+      }
+      return result;
     },
   };
 });
@@ -272,15 +285,31 @@ describe('#8729 — POST /devices/:id/force-reboot (real grant, real claim path)
     expect(await forceRebootRows(deviceId)).toHaveLength(1);
   });
 
-  it('rolls the queued row back when the grant turns out to be spent (consumed last)', async () => {
+  it('two concurrent requests with one grant: exactly one command survives, the loser rolls its row back', async () => {
+    // Codex review: a replay AFTER the first request finished is refused by
+    // validation before it queues anything, so it never reaches the rollback.
+    // Here both requests pass validation and both queue a row (the barrier
+    // holds each one inside its savepoint until both have), and only then race
+    // for the single GETDEL. The loser's consume fails, it throws, and its
+    // savepoint must drop the row it queued.
     const deviceId = await seedDevice();
     const grant = await mintFor(deviceId);
-    expect((await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant })).status).toBe(201);
-    // Second use: validation passes only if the grant still exists, so spend
-    // it via the first call and confirm the replay leaves exactly one row; the
-    // replay's own insert must have been rolled back with its savepoint.
-    const replay = await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant });
-    expect(replay.status).toBe(403);
-    expect(await forceRebootRows(deviceId)).toHaveLength(1);
+    let release!: () => void;
+    const ready = new Promise<void>((resolve) => { release = resolve; });
+    dispatchOverride.barrier = { size: 2, arrived: 0, release, ready };
+
+    const [a, b] = await Promise.all([
+      post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant }),
+      post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant }),
+    ]);
+    dispatchOverride.barrier = null;
+
+    expect([a.status, b.status].sort()).toEqual([201, 403]);
+    const loser = a.status === 403 ? a : b;
+    expect(await loser.json()).toMatchObject({ code: 'STEP_UP_REQUIRED' });
+    const rows = await forceRebootRows(deviceId);
+    expect(rows).toHaveLength(1);
+    const winner = a.status === 201 ? a : b;
+    expect(rows[0]!.id).toBe((await winner.json()).id);
   });
 });

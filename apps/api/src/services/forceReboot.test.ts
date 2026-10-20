@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   MIN_AGENT_VERSION_FORCE_REBOOT,
   agentSupportsForceReboot,
   forceRebootArgv,
+  forceRebootOfflinePolicy,
+  FORCE_REBOOT_MAX_DELIVERY_MS,
 } from './forceReboot';
 import { forceRebootResourceDigest } from './mfaStepUpGrant';
 
@@ -50,5 +52,29 @@ describe('forceRebootResourceDigest (#8729)', () => {
     expect(forceRebootResourceDigest({ deviceId: A })).toBe(forceRebootResourceDigest({ deviceId: A }));
     expect(forceRebootResourceDigest({ deviceId: A })).not.toBe(forceRebootResourceDigest({ deviceId: B }));
     expect(forceRebootResourceDigest({ deviceId: A })).toMatch(/^sha256:[0-9a-f]{64}$/);
+  });
+});
+
+describe('forceRebootOfflinePolicy (#8729, Codex review)', () => {
+  const ENV = 'DEVICE_COMMAND_QUEUE_LIVE_ONLY_TTL_MINUTES';
+  const original = process.env[ENV];
+  afterEach(() => {
+    if (original === undefined) delete process.env[ENV]; else process.env[ENV] = original;
+  });
+
+  it('is a 15-minute queue window by default', () => {
+    delete process.env[ENV];
+    expect(forceRebootOfflinePolicy()).toEqual({ kind: 'queue', deliverWithinMs: 15 * 60 * 1000 });
+  });
+
+  it('never exceeds 15 minutes, even when the shared live_only window is raised', () => {
+    process.env[ENV] = '1440';
+    expect(forceRebootOfflinePolicy()).toEqual({ kind: 'queue', deliverWithinMs: FORCE_REBOOT_MAX_DELIVERY_MS });
+    expect(FORCE_REBOOT_MAX_DELIVERY_MS).toBe(15 * 60 * 1000);
+  });
+
+  it('follows the shared window when an operator shortens it', () => {
+    process.env[ENV] = '5';
+    expect(forceRebootOfflinePolicy()).toEqual({ kind: 'queue', deliverWithinMs: 5 * 60 * 1000 });
   });
 });

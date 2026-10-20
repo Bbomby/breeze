@@ -174,6 +174,8 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
       payload: {},
       userId: 'user-123',
       deferDelivery: true,
+      // Codex review: capped at 15 minutes whatever the shared live_only setting.
+      offlinePolicy: { kind: 'queue', deliverWithinMs: 15 * 60 * 1000 },
     }));
     // One savepoint: lock the actor, queue the row, consume the grant LAST
     // (Redis GETDEL cannot be rolled back, so nothing that can refuse may

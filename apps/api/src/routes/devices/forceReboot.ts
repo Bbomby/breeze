@@ -30,6 +30,7 @@ import {
   MIN_AGENT_VERSION_FORCE_REBOOT,
   agentSupportsForceReboot,
   forceRebootArgv,
+  forceRebootOfflinePolicy,
   type ForceRebootOs,
 } from '../../services/forceReboot';
 
@@ -190,6 +191,8 @@ forceRebootRoutes.post(
           payload: {},
           userId: auth.user.id,
           deferDelivery: true,
+          // live_only, but never longer than 15 minutes (services/forceReboot.ts).
+          offlinePolicy: forceRebootOfflinePolicy(),
         });
         if (!dispatched.ok) return dispatched;
         // The device went offline between the check above and the seam's own
