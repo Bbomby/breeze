@@ -10,7 +10,8 @@
  * generic single and bulk command routes (routes/devices/schemas.ts), the AI
  * `execute_command` tool, fleet-findings remediation, fix-memory actions and
  * the mobile device actions. This test fails if `force_reboot` is added to any
- * of them, or appears anywhere in the API outside the files below.
+ * of them, or appears anywhere in the API outside the files below (as the
+ * literal or as the `CommandTypes.FORCE_REBOOT` constant).
  *
  * Plain unit test: reads the source tree and parses the route schemas.
  */
@@ -34,11 +35,14 @@ const ALLOWED: Record<string, string> = {
   'services/commandTimeouts.ts': 'execution budget',
   'services/partnerTrust.ts': 'gated (operator-directed) classification',
   'services/forceReboot.ts': 'version gate, argv, step-up digest',
-  'routes/devices/commands.ts': 'the one route that queues it',
+  'routes/devices/forceReboot.ts': 'the one route that queues it',
   'openapi.ts': 'documents the route and the type',
 };
 
-const WORD = /(?<![A-Za-z0-9_])force_reboot(?![A-Za-z0-9_])/;
+// The literal, or the `CommandTypes.FORCE_REBOOT` constant (so wiring the
+// constant into a new path is caught too). Whole words only:
+// `device_force_reboot` and `MIN_AGENT_VERSION_FORCE_REBOOT` do not match.
+const WORD = /(?<![A-Za-z0-9_])(?:force_reboot|FORCE_REBOOT)(?![A-Za-z0-9_])/;
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

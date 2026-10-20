@@ -1,0 +1,237 @@
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { zValidator } from '../../lib/validation';
+import { db, runAfterDbContextCommit } from '../../db';
+import {
+  authMiddleware,
+  requireInteractiveSession,
+  requireMfa,
+  requirePermission,
+  requireScope,
+  type AuthContext,
+} from '../../middleware/auth';
+import { PERMISSIONS, type UserPermissions } from '../../services/permissions';
+import { canAccessDeviceSite, getDeviceWithOrgCheck } from './helpers';
+import {
+  consumeStepUpGrant,
+  forceRebootResourceDigest,
+  validateStepUpGrant,
+  type StepUpGrantBinding,
+} from '../../services/mfaStepUpGrant';
+import { getUserEpochs } from '../../services/authEpochs';
+import { lockActorAssurance } from '../../services/stepUpActorAssurance';
+import { ENABLE_2FA } from '../auth/schemas';
+import { writeRouteAudit } from '../../services/auditEvents';
+import { dispatchDeviceCommand } from '../../services/dispatchDeviceCommand';
+import { assertDeviceExecuteAllowed, TrustDeniedError } from '../../services/partnerTrust.commands';
+import { trustDenyBody, type TrustDenyCode } from '../../services/partnerTrust';
+import { CommandTypes } from '../../services/commandTypes';
+import {
+  MIN_AGENT_VERSION_FORCE_REBOOT,
+  agentSupportsForceReboot,
+  forceRebootArgv,
+  type ForceRebootOs,
+} from '../../services/forceReboot';
+
+export const forceRebootRoutes = new Hono();
+
+forceRebootRoutes.use('*', authMiddleware);
+
+const STEP_UP_REQUIRED_BODY = { error: 'Step-up required', code: 'STEP_UP_REQUIRED' } as const;
+const DEVICE_OFFLINE_BODY = {
+  error: 'The device is not online. A force reboot is only sent to a device that is online now.',
+  code: 'DEVICE_OFFLINE',
+} as const;
+
+/** Thrown inside the grant transaction so it rolls back as a refusal, not a failure. */
+class ForceRebootStepUpConsumedError extends Error {}
+
+const forceRebootSchema = z.object({
+  // Single-use `device_force_reboot` grant from POST /auth/mfa/step-up, bound
+  // to { deviceId }. Optional in the schema so a missing grant answers the
+  // same 403 as a stale one; required whenever 2FA is enabled.
+  stepUpGrant: z.string().uuid().optional(),
+}).strict();
+
+/**
+ * POST /devices/:id/force-reboot — "Force reboot now" (#8729).
+ *
+ * An immediate reboot that force-closes running apps (`shutdown /r /f /t 0` on
+ * Windows; on macOS and Linux `shutdown -r` does not wait on apps, so force
+ * changes nothing there). Plain Reboot is unchanged and keeps its own route.
+ *
+ * This is the ONLY way to queue `force_reboot`
+ * (__tests__/forceRebootExposure.contract.test.ts): the generic single and
+ * bulk command routes, AI tools, MCP, mobile, fix-memory and fleet findings
+ * cannot. A force-close of unsaved work stays a human, step-up action:
+ *   - interactive user session (API keys, MCP grants and AI agents refused,
+ *     whatever the 2FA setting), devices:execute, satisfied MFA;
+ *   - a single-use `device_force_reboot` grant bound to THIS device.
+ *
+ * Order: every check that can refuse runs BEFORE the grant is consumed, so a
+ * refusal leaves it unspent and the technician can retry without a second
+ * factor prompt. Then, in one transaction, the actor's assurance is locked
+ * and the grant consumed; the command is queued through the normal enqueue
+ * seam, so the power-state barrier still holds it behind in-flight work and
+ * the 15-minute live_only window expires it rather than letting it fire late.
+ */
+forceRebootRoutes.post(
+  '/:id/force-reboot',
+  requireScope('organization', 'partner', 'system'),
+  requireInteractiveSession(),
+  requirePermission(PERMISSIONS.DEVICES_EXECUTE.resource, PERMISSIONS.DEVICES_EXECUTE.action),
+  requireMfa(),
+  zValidator('json', forceRebootSchema),
+  async (c) => {
+    const auth = c.get('auth') as AuthContext;
+    const deviceId = c.req.param('id')!;
+    const { stepUpGrant } = c.req.valid('json');
+
+    const device = await getDeviceWithOrgCheck(deviceId, auth);
+    if (!device) {
+      return c.json({ error: 'Device not found' }, 404);
+    }
+    if (!canAccessDeviceSite(device, c.get('permissions') as UserPermissions | undefined)) {
+      return c.json({ error: 'Access to this site denied' }, 403);
+    }
+    if (device.status === 'decommissioned') {
+      return c.json({ error: 'Cannot send commands to a decommissioned device' }, 400);
+    }
+
+    // Step-up: validate now (non-consuming), consume only once every other
+    // check has passed. Missing, stale and mismatched grants are ONE response:
+    // telling them apart would be a probing oracle for the binding.
+    let grantBinding: StepUpGrantBinding | null = null;
+    if (ENABLE_2FA) {
+      const epochs = await getUserEpochs(auth.user.id);
+      const sid = auth.token?.sid;
+      if (!epochs || !sid) {
+        return c.json({ error: 'Service temporarily unavailable' }, 503);
+      }
+      grantBinding = {
+        userId: auth.user.id,
+        operation: 'device_force_reboot',
+        authEpoch: epochs.authEpoch,
+        mfaEpoch: epochs.mfaEpoch,
+        sid,
+        resourceDigest: forceRebootResourceDigest({ deviceId }),
+      };
+      if (!stepUpGrant || !(await validateStepUpGrant(stepUpGrant, grantBinding))) {
+        return c.json(STEP_UP_REQUIRED_BODY, 403);
+      }
+    }
+
+    // An agent that predates force_reboot would answer "unknown command type"
+    // after the technician has passed MFA and typed the hostname. Unknown,
+    // empty and unparseable versions fail closed.
+    if (!agentSupportsForceReboot(device.agentVersion)) {
+      return c.json({
+        error: `This device's agent is too old for a force reboot. Update the agent to ${MIN_AGENT_VERSION_FORCE_REBOOT} or later.`,
+        code: 'AGENT_UPGRADE_REQUIRED',
+        agentVersion: device.agentVersion ?? null,
+        minAgentVersion: MIN_AGENT_VERSION_FORCE_REBOOT,
+      }, 409);
+    }
+
+    // "Now" means now: never queue a force-close for a device that is not
+    // online. Same definition of online as the enqueue seam
+    // (services/dispatchDeviceCommand.ts), so a device in maintenance mode is
+    // refused too; end maintenance first.
+    if (device.status !== 'online') {
+      return c.json(DEVICE_OFFLINE_BODY, 409);
+    }
+
+    const argv = forceRebootArgv(device.osType as ForceRebootOs);
+    if (!argv) {
+      return c.json({ error: `Force reboot is not supported on ${device.osType}` }, 400);
+    }
+
+    try {
+      await assertDeviceExecuteAllowed(deviceId, CommandTypes.FORCE_REBOOT, auth.user.id);
+    } catch (error) {
+      if (!(error instanceof TrustDeniedError)) throw error;
+      return c.json(trustDenyBody({
+        allow: false,
+        code: error.code,
+        capability: 'device_execute',
+        reason: error.reason,
+      }, false), 403);
+    }
+
+    if (grantBinding) {
+      const binding = grantBinding;
+      try {
+        await db.transaction(async (tx) => {
+          if (!(await lockActorAssurance(tx, auth, binding)) || !(await consumeStepUpGrant(stepUpGrant!, binding))) {
+            throw new ForceRebootStepUpConsumedError();
+          }
+        });
+      } catch (error) {
+        if (error instanceof ForceRebootStepUpConsumedError) return c.json(STEP_UP_REQUIRED_BODY, 403);
+        throw error;
+      }
+    }
+
+    const res = await dispatchDeviceCommand({
+      deviceId,
+      type: CommandTypes.FORCE_REBOOT,
+      // The agent derives the argv itself (ForceRebootArgv); nothing to carry.
+      payload: {},
+      userId: auth.user.id,
+      deferDelivery: true,
+    });
+    if (!res.ok) {
+      if (res.code === 'device_offline') return c.json(DEVICE_OFFLINE_BODY, 409);
+      if (res.code === 'device_pending_assignment') return c.json({ error: res.error, code: res.code }, 409);
+      if (res.code === 'device_decommissioned') {
+        return c.json({ error: 'Cannot send commands to a decommissioned device' }, 400);
+      }
+      if (res.code === 'device_not_found') return c.json({ error: 'Device not found' }, 404);
+      if (res.code === 'trust_denied' && res.trust) {
+        return c.json(trustDenyBody({
+          allow: false,
+          code: res.error as TrustDenyCode,
+          capability: 'device_execute',
+          reason: res.trust.reason,
+        }, false), 403);
+      }
+      return c.json({ error: res.error }, 500);
+    }
+    const command = res.command;
+
+    writeRouteAudit(c, {
+      orgId: device.orgId,
+      action: `agent.command.${CommandTypes.FORCE_REBOOT}`,
+      resourceType: 'device',
+      resourceId: deviceId,
+      resourceName: device.hostname,
+      details: {
+        commandId: command.id,
+        type: CommandTypes.FORCE_REBOOT,
+        force: true,
+        osType: device.osType,
+        argv,
+        stepUp: grantBinding ? 'device_force_reboot' : 'not_required',
+        delivery: res.delivery,
+      },
+    });
+
+    if (res.deliver) {
+      const deliver = res.deliver;
+      runAfterDbContextCommit('devices.forceReboot.deliver', async () => {
+        await deliver();
+      });
+    }
+
+    return c.json({
+      id: command.id,
+      deviceId: command.deviceId,
+      type: command.type,
+      status: command.status,
+      createdAt: command.createdAt,
+      delivery: res.delivery,
+      deliverBy: res.deliverBy,
+      argv,
+    }, 201);
+  },
+);

@@ -5,6 +5,7 @@ import { metricsRoutes } from './metrics';
 import { processSamplesRoutes } from './processSamples';
 import { softwareRoutes } from './software';
 import { commandsRoutes } from './commands';
+import { forceRebootRoutes } from './forceReboot';
 import { hardwareRoutes } from './hardware';
 import { placementRoutes } from './placement';
 import { alertsRoutes } from './alerts';
@@ -97,6 +98,8 @@ deviceRoutes.route('/', filesystemRoutes);
 // Mount move-org BEFORE core routes — its POST /:id/move-org would collide
 // with any future :id-prefixed match in core if registered after.
 deviceRoutes.route('/', moveOrgRoutes);
+// #8729: POST /:id/force-reboot, the only (step-up) way to force-reboot a device.
+deviceRoutes.route('/', forceRebootRoutes);
 
 // Mount the network arm of the unified Devices list (#1322) BEFORE core
 // routes — `GET /network` is a static path that must not be eaten by the
