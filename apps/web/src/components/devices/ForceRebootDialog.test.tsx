@@ -104,6 +104,24 @@ describe('ForceRebootDialog (#8729)', () => {
     expect(forceRebootMock).toHaveBeenLastCalledWith('d1', { stepUpGrant: 'grant-1' });
   });
 
+  // Review fix: a second STEP_UP_REQUIRED (grant spent by a double submit, or
+  // MFA reset in another tab) must say so, not silently clear the code.
+  it('explains a step-up that fails again instead of silently clearing the code', async () => {
+    forceRebootMock
+      .mockRejectedValueOnce(denial('STEP_UP_REQUIRED'))
+      .mockRejectedValueOnce(denial('STEP_UP_REQUIRED'));
+    const { onCompleted } = renderDialog();
+    await typeHostname('LAPTOP-07');
+    await userEvent.click(confirmButton());
+    await waitFor(() => expect(screen.getByTestId('force-reboot-stepup-code')).toBeInTheDocument());
+    await userEvent.type(screen.getByTestId('force-reboot-stepup-code'), '123456');
+    await userEvent.click(confirmButton());
+
+    await waitFor(() => expect(screen.getByTestId('force-reboot-error')).toHaveTextContent(/verification/i));
+    expect(screen.getByTestId('force-reboot-stepup-code')).toHaveValue('');
+    expect(onCompleted).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['DEVICE_OFFLINE', 409, /not online/i],
     ['AGENT_UPGRADE_REQUIRED', 409, /agent/i],

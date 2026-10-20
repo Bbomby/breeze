@@ -34,19 +34,19 @@ import { forceRebootResourceDigest, mintStepUpGrant } from '../../services/mfaSt
 import { MIN_AGENT_VERSION_FORCE_REBOOT } from '../../services/forceReboot';
 import { setupTestEnvironment, type TestEnvironment } from './db-utils';
 
-// The REAL enqueue seam, wrapped so one test can make it refuse exactly once
-// after preflight passed (the device dropping offline in between). Every other
-// call goes straight through.
-const { dispatchOverride } = vi.hoisted(() => ({ dispatchOverride: { next: null as null | Record<string, unknown> } }));
+// The REAL enqueue seam, wrapped so one test can run a hook exactly once just
+// before it (the device dropping offline after the route's own check). Every
+// call still goes through the real seam.
+const { dispatchOverride } = vi.hoisted(() => ({ dispatchOverride: { before: null as null | (() => Promise<void>) } }));
 vi.mock('../../services/dispatchDeviceCommand', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/dispatchDeviceCommand')>();
   return {
     ...actual,
     dispatchDeviceCommand: async (input: Parameters<typeof actual.dispatchDeviceCommand>[0]) => {
-      const forced = dispatchOverride.next;
-      if (forced) {
-        dispatchOverride.next = null;
-        return forced as never;
+      const before = dispatchOverride.before;
+      if (before) {
+        dispatchOverride.before = null;
+        await before();
       }
       return actual.dispatchDeviceCommand(input);
     },
@@ -250,19 +250,24 @@ describe('#8729 — POST /devices/:id/force-reboot (real grant, real claim path)
     expect(await forceRebootRows(deviceId)).toHaveLength(0);
   });
 
-  it('leaves the grant unspent when the enqueue seam refuses after preflight (offline race)', async () => {
-    // The device passes preflight as online, then drops offline before the
-    // enqueue seam reads it. That refusal must not spend the real grant.
+  it('refuses, and leaves the grant unspent, when the device goes offline after the route checked it', async () => {
+    // The device passes the route's check as online, then its heartbeat lapses
+    // before the enqueue seam reads it. force_reboot is a live_only QUEUE type,
+    // so the real seam would keep the row for 15 minutes; the route must drop
+    // it and must not spend the real grant.
     const deviceId = await seedDevice();
     const grant = await mintFor(deviceId);
-    dispatchOverride.next = { ok: false, code: 'device_offline', error: 'Device is offline, cannot execute command' };
+    dispatchOverride.before = async () => {
+      await getTestDb().update(devices).set({ status: 'offline' }).where(eq(devices.id, deviceId));
+    };
 
     const refused = await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant });
     expect(refused.status).toBe(409);
     expect(await refused.json()).toMatchObject({ code: 'DEVICE_OFFLINE' });
     expect(await forceRebootRows(deviceId)).toHaveLength(0);
 
-    // The same grant still works.
+    // Back online: the same grant still works.
+    await getTestDb().update(devices).set({ status: 'online' }).where(eq(devices.id, deviceId));
     expect((await post(`/devices/${deviceId}/force-reboot`, { stepUpGrant: grant })).status).toBe(201);
     expect(await forceRebootRows(deviceId)).toHaveLength(1);
   });

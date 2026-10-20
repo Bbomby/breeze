@@ -103,6 +103,14 @@ export default function ForceRebootDialog({ open, device, onClose, onCompleted }
     } catch (err) {
       const status = (err as { status?: number } | null)?.status;
       const errCode = (err as { code?: string } | null)?.code;
+      if (status === 403 && errCode === 'STEP_UP_REQUIRED' && phase === 'stepUp') {
+        // The server refused a grant we just minted: spent by a double
+        // submit, or the session's MFA state changed in another tab. Say so,
+        // rather than silently clearing the code.
+        setCode('');
+        setError(t('forceRebootDialog.stepUpFailed'));
+        return;
+      }
       if (status === 403 && errCode === 'STEP_UP_REQUIRED') {
         // Device pages do not load account factors; discover them only now
         // that the server has asked, so 2FA-off deployments never need to.

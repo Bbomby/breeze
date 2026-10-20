@@ -45,6 +45,8 @@ const DEVICE_OFFLINE_BODY = {
 
 /** Thrown inside the savepoint so it rolls back (queued row included) as a refusal, not a failure. */
 class ForceRebootStepUpConsumedError extends Error {}
+/** Thrown inside the savepoint when the device is no longer online: the queued row is dropped. */
+class ForceRebootDeviceOfflineError extends Error {}
 
 const forceRebootSchema = z.object({
   // Single-use `device_force_reboot` grant from POST /auth/mfa/step-up, bound
@@ -68,8 +70,9 @@ const forceRebootSchema = z.object({
  *     whatever the 2FA setting), devices:execute, satisfied MFA;
  *   - a single-use `device_force_reboot` grant bound to THIS device.
  *
- * Order: every check that can refuse, the enqueue seam's own included, runs
- * BEFORE the grant is consumed, so a refusal leaves it unspent and the
+ * Order: the device checks (agent version, online, OS, partner trust) run
+ * before the step-up is even asked for, and every check that can refuse, the
+ * enqueue seam's own included, runs BEFORE the grant is consumed, so a refusal leaves it unspent and the
  * technician can retry without a second factor prompt. In one savepoint the
  * actor's assurance is locked, the command is queued through the normal
  * enqueue seam (so the power-state barrier still holds it behind in-flight
@@ -100,32 +103,12 @@ forceRebootRoutes.post(
       return c.json({ error: 'Cannot send commands to a decommissioned device' }, 400);
     }
 
-    // Step-up: validate now (non-consuming), consume only once every other
-    // check has passed. Missing, stale and mismatched grants are ONE response:
-    // telling them apart would be a probing oracle for the binding.
-    let grantBinding: StepUpGrantBinding | null = null;
-    if (ENABLE_2FA) {
-      const epochs = await getUserEpochs(auth.user.id);
-      const sid = auth.token?.sid;
-      if (!epochs || !sid) {
-        return c.json({ error: 'Service temporarily unavailable' }, 503);
-      }
-      grantBinding = {
-        userId: auth.user.id,
-        operation: 'device_force_reboot',
-        authEpoch: epochs.authEpoch,
-        mfaEpoch: epochs.mfaEpoch,
-        sid,
-        resourceDigest: forceRebootResourceDigest({ deviceId }),
-      };
-      if (!stepUpGrant || !(await validateStepUpGrant(stepUpGrant, grantBinding))) {
-        return c.json(STEP_UP_REQUIRED_BODY, 403);
-      }
-    }
-
-    // An agent that predates force_reboot would answer "unknown command type"
-    // after the technician has passed MFA and typed the hostname. Unknown,
-    // empty and unparseable versions fail closed.
+    // Everything below that can refuse the DEVICE runs before the step-up
+    // check, so the technician hears "agent too old", "not online" or a trust
+    // denial on the first submit, before being asked for a factor.
+    //
+    // An agent that predates force_reboot would answer "unknown command type".
+    // Unknown, empty and unparseable versions fail closed.
     if (!agentSupportsForceReboot(device.agentVersion)) {
       return c.json({
         error: `This device's agent is too old for a force reboot. Update the agent to ${MIN_AGENT_VERSION_FORCE_REBOOT} or later.`,
@@ -160,11 +143,35 @@ forceRebootRoutes.post(
       }, false), 403);
     }
 
+    // Step-up: validate now (non-consuming), consume only after the command is
+    // queued (below). Missing, stale and mismatched grants are ONE response:
+    // telling them apart would be a probing oracle for the binding.
+    let grantBinding: StepUpGrantBinding | null = null;
+    if (ENABLE_2FA) {
+      const epochs = await getUserEpochs(auth.user.id);
+      const sid = auth.token?.sid;
+      if (!epochs || !sid) {
+        return c.json({ error: 'Service temporarily unavailable' }, 503);
+      }
+      grantBinding = {
+        userId: auth.user.id,
+        operation: 'device_force_reboot',
+        authEpoch: epochs.authEpoch,
+        mfaEpoch: epochs.mfaEpoch,
+        sid,
+        resourceDigest: forceRebootResourceDigest({ deviceId }),
+      };
+      if (!stepUpGrant || !(await validateStepUpGrant(stepUpGrant, grantBinding))) {
+        return c.json(STEP_UP_REQUIRED_BODY, 403);
+      }
+    }
+
     // One savepoint, in this order: lock the actor's assurance (SHARE on the
     // users row, held until commit), queue the row, THEN consume the grant.
     //   - The grant is a Redis GETDEL, outside Postgres, so a rollback cannot
     //     un-spend it. Consuming last is what keeps it unspent when the enqueue
-    //     seam refuses (an offline race, trust, a parked device).
+    //     seam refuses (trust, a parked device) or the device is no longer
+    //     online (below).
     //   - A consume that fails (replayed or revoked grant) throws, and the
     //     savepoint rolls the queued row back: no command without a spent grant.
     //   - The actor lock covers the insert, so a session revoke or MFA reset
@@ -185,6 +192,11 @@ forceRebootRoutes.post(
           deferDelivery: true,
         });
         if (!dispatched.ok) return dispatched;
+        // The device went offline between the check above and the seam's own
+        // read. force_reboot is a live_only QUEUE type, so the seam would keep
+        // the row for 15 minutes rather than refuse; "now" means now, so throw
+        // and let the savepoint drop the row instead.
+        if (dispatched.delivery === 'queued_offline') throw new ForceRebootDeviceOfflineError();
         if (grantBinding && !(await consumeStepUpGrant(stepUpGrant!, grantBinding))) {
           throw new ForceRebootStepUpConsumedError();
         }
@@ -192,6 +204,7 @@ forceRebootRoutes.post(
       });
     } catch (error) {
       if (error instanceof ForceRebootStepUpConsumedError) return c.json(STEP_UP_REQUIRED_BODY, 403);
+      if (error instanceof ForceRebootDeviceOfflineError) return c.json(DEVICE_OFFLINE_BODY, 409);
       throw error;
     }
     if (!res.ok) {

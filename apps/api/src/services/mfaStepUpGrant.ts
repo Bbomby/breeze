@@ -253,6 +253,15 @@ export function maintenanceResourceDigest(input: {
 }
 
 /**
+ * Canonical digest for a `device_force_reboot` grant (#8729): the device id
+ * alone, so a grant minted for one device can never force-reboot another.
+ */
+export function forceRebootResourceDigest(input: { deviceId: string }): `sha256:${string}` {
+  const canonical = JSON.stringify({ deviceId: input.deviceId });
+  return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
+}
+
+/**
  * Canonical digest for a device move-org grant (spec 2026-09-18 D2).
  *
  * Same contract as maintenanceResourceDigest: the mint route and the move
@@ -263,11 +272,6 @@ export function maintenanceResourceDigest(input: {
  * of the intent, so it is bound: a grant minted without it cannot authorise a
  * move that sets it.
  */
-export function forceRebootResourceDigest(input: { deviceId: string }): `sha256:${string}` {
-  const canonical = JSON.stringify({ deviceId: input.deviceId });
-  return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
-}
-
 export function moveOrgResourceDigest(input: {
   deviceId: string;
   targetOrgId: string;

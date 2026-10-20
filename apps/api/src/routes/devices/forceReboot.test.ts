@@ -347,6 +347,51 @@ describe('POST /devices/:id/force-reboot (#8729)', () => {
     },
   );
 
+  // Review fix: the device checks answer on the FIRST submit (no grant), so
+  // the technician is never asked for a factor for a device that cannot do it.
+  it.each([
+    ['an agent that is too old', { agentVersion: '0.124.0' }, 'AGENT_UPGRADE_REQUIRED'],
+    ['a device that is not online', { status: 'offline' }, 'DEVICE_OFFLINE'],
+  ])('refuses %s before asking for the step-up', async (_label, over, code) => {
+    vi.mocked(getDeviceWithOrgCheck).mockResolvedValue(deviceRow(over) as never);
+    const res = await post({});
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code });
+    expect(validateStepUpGrant).not.toHaveBeenCalled();
+    expectNoEffect();
+  });
+
+  it('refuses a trust denial before asking for the step-up', async () => {
+    assertDeviceExecuteAllowedMock.mockRejectedValue(
+      new TrustDeniedError('TRUST_PROBATION', 'Partner verification is required.', DEVICE_ID, 'force_reboot'),
+    );
+    const res = await post({});
+    expect(res.status).toBe(403);
+    expect(await res.json()).not.toMatchObject({ code: 'STEP_UP_REQUIRED' });
+    expect(validateStepUpGrant).not.toHaveBeenCalled();
+  });
+
+  // Review fix: force_reboot is a live_only QUEUE type, so a device that goes
+  // offline after the route's check is not refused by the seam; it would sit
+  // queued for 15 minutes. The route drops the row instead.
+  it('refuses with DEVICE_OFFLINE and rolls back when the seam would only queue the command offline', async () => {
+    dispatchDeviceCommandMock.mockResolvedValue({
+      ok: true,
+      command: { id: 'cmd-late', deviceId: DEVICE_ID, type: 'force_reboot', status: 'pending', createdAt: new Date() },
+      delivery: 'queued_offline',
+      deliverBy: new Date(Date.now() + 15 * 60 * 1000),
+    });
+    let savepoint: Promise<unknown> | undefined;
+    vi.mocked(withDbTransaction).mockImplementation(((fn: () => Promise<unknown>) => (savepoint = fn())) as never);
+    const res = await post();
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'DEVICE_OFFLINE' });
+    await expect(savepoint).rejects.toBeInstanceOf(Error);
+    expect(consumeStepUpGrant).not.toHaveBeenCalled();
+    expect(writeRouteAudit).not.toHaveBeenCalled();
+    expect(runAfterDbContextCommit).not.toHaveBeenCalled();
+  });
+
   it('refuses when partner trust denies device execution, before the grant is spent', async () => {
     assertDeviceExecuteAllowedMock.mockRejectedValue(
       new TrustDeniedError('TRUST_PROBATION', 'Partner verification is required.', DEVICE_ID, 'force_reboot'),
