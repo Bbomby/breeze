@@ -48,9 +48,20 @@ export function resolveOutstandingDeviceScope(
   if (opts.allowedSiteIds && opts.allowedSiteIds.length === 0) return null;
 
   const conditions: SQL[] = [eq(devices.isEphemeral, false), notParkedDeviceCondition()];
+  // The tenant predicate goes on BOTH tables. device_patches.org_id is
+  // restamped with the device on an org move (routes/devices/core.ts
+  // getDeviceOrgDenormalizedTables), so the second copy never changes the
+  // result; it lets the "All organizations" count use
+  // device_patches_org_status_idx (org_id, status) and read only the caller's
+  // pending rows, not every tenant's.
   const orgCond = auth.orgCondition(devices.orgId);
   if (orgCond) conditions.push(orgCond);
-  if (opts.orgId) conditions.push(eq(devices.orgId, opts.orgId));
+  const patchOrgCond = auth.orgCondition(devicePatches.orgId);
+  if (patchOrgCond) conditions.push(patchOrgCond);
+  if (opts.orgId) {
+    conditions.push(eq(devices.orgId, opts.orgId));
+    conditions.push(eq(devicePatches.orgId, opts.orgId));
+  }
   if (opts.allowedSiteIds) conditions.push(inArray(devices.siteId, opts.allowedSiteIds));
   return conditions;
 }
