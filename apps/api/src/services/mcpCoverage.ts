@@ -142,6 +142,15 @@ export type McpExemptReason =
    */
   | 'human_only_tenant_restructure'
   /**
+   * "Force reboot now" (#8729): an immediate reboot that closes running apps
+   * and discards unsaved work on the device. Interactive user session only,
+   * MFA plus a single-use `device_force_reboot` step-up bound to the device,
+   * and a typed-hostname confirmation in the console. An agent-reachable tool
+   * would bypass exactly the human step this action exists to require;
+   * plain reboot stays reachable through the existing device-command tools.
+   */
+  | 'human_only_force_reboot'
+  /**
    * The chat / script-builder session transport itself (sessions, messages,
    * interrupt, approve-plan). This is the plumbing the AI features run over,
    * not a tool surface an AI agent calls (W05 gap triage).
@@ -447,6 +456,7 @@ export const MCP_COVERAGE: Readonly<Record<string, McpCoverageEntry>> = {
   // GET /devices/:id/monitors (#6371 W05c2): the same per-device monitor state
   // is agent-reachable per monitor via get_monitor_activity's deviceId filter.
   'devices/monitors.ts': { tools: ['list_monitors', 'get_monitor_activity', 'reset_monitor_escalation'] },
+  'devices/forceReboot.ts': { exempt: 'human_only_force_reboot', note: 'Force reboot now: closes running apps; step-up bound to one device.' },
   'devices/moveOrg.ts': { exempt: 'human_only_tenant_restructure', note: 'Cross-tenant device move -- rewrites which tenant owns the device.' },
   'devices/network.ts': { tools: ['list_network_assets'] },
   'devices/options.ts': { exempt: 'internal_plumbing' },
