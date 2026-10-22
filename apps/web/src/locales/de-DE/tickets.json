@@ -235,6 +235,8 @@
     },
     "billedVsWorked": "{{worked}} Std. gearbeitet · {{billed}} Std. abgerechnet",
     "includedMinutes": "{{hours}} Std. im Vertrag enthalten",
+    "laborBreakdown": "{{hours}} Std. × {{rate}} = {{amount}}",
+    "laborRule": "Jeder Eintrag wird mit seinen auf Stunden gerundeten Minuten (2 Dezimalstellen) × Satz abgerechnet.",
     "missingRateCount_one": "1 Eintrag hat keinen Stundensatz – nicht im obigen Betrag enthalten",
     "missingRateCount_other": "{{count}} Einträge haben keinen Stundensatz – nicht im obigen Betrag enthalten",
     "deleteEntry": "Zeiteintrag über {{duration}} von {{tech}} löschen",

@@ -235,6 +235,8 @@
     },
     "billedVsWorked": "{{worked}} sa çalışıldı · {{billed}} sa faturalandı",
     "includedMinutes": "{{hours}} sa sözleşmeye dahil",
+    "laborBreakdown": "{{hours}} sa × {{rate}} = {{amount}}",
+    "laborRule": "Her kayıt, saate yuvarlanan dakikaları (2 ondalık) × ücreti üzerinden faturalanır.",
     "missingRateCount_one": "1 kayıtta saatlik ücret yok — yukarıdaki tutara dahil değil",
     "missingRateCount_other": "{{count}} kayıtta saatlik ücret yok — yukarıdaki tutara dahil değil",
     "deleteEntry": "{{tech}} tarafından girilen {{duration}} zaman girişini sil",

@@ -235,6 +235,8 @@
     },
     "billedVsWorked": "{{worked}} h travaillées · {{billed}} h facturées",
     "includedMinutes": "{{hours}} h incluses au contrat",
+    "laborBreakdown": "{{hours}} h × {{rate}} = {{amount}}",
+    "laborRule": "Chaque saisie facture ses minutes arrondies en heures (2 décimales) × son taux.",
     "missingRateCount_one": "1 entrée n'a pas de taux horaire — non comptée dans le montant ci-dessus",
     "missingRateCount_other": "{{count}} entrées n'ont pas de taux horaire — non comptées dans le montant ci-dessus",
     "deleteEntry": "Supprimer l’entrée de temps de {{duration}} de {{tech}}",

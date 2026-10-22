@@ -235,6 +235,8 @@
     },
     "billedVsWorked": "{{worked}} h worked · {{billed}} h billed",
     "includedMinutes": "{{hours}} h included in contract",
+    "laborBreakdown": "{{hours}} h × {{rate}} = {{amount}}",
+    "laborRule": "Each entry bills its minutes rounded to hours (2 decimals) × its rate.",
     "missingRateCount_one": "1 entry has no hourly rate — not counted in the amount above",
     "missingRateCount_other": "{{count}} entries have no hourly rate — not counted in the amount above",
     "deleteEntry": "Delete {{duration}} time entry by {{tech}}",
