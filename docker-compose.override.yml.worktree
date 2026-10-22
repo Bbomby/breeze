@@ -71,9 +71,13 @@ services:
       - ./apps/portal/tsconfig.json:/app/apps/portal/tsconfig.json:ro
       - ./apps/portal/astro.config.mjs:/app/apps/portal/astro.config.mjs:ro
       - ./packages/shared/src:/app/packages/shared/src:cached
+      - ./packages/document-ui/src:/app/packages/document-ui/src:cached
+      - ./packages/document-ui/package.json:/app/packages/document-ui/package.json:ro
+      - ./packages/document-ui/tsconfig.json:/app/packages/document-ui/tsconfig.json:ro
       - /app/node_modules
       - /app/apps/portal/node_modules
       - /app/packages/shared/node_modules
+      - /app/packages/document-ui/node_modules
     healthcheck:
       test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://127.0.0.1:4322/portal/login']
       interval: 30s
