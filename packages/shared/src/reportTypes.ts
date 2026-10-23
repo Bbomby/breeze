@@ -59,6 +59,10 @@ export const REPORT_TYPES = [
   // Business reports phase 2 W2 (#9828): quote win rate over revision lineages.
   // Business type (msp_staff, partner capable); never portal-visible.
   'quote_win_rate',
+  // Business reports phase 2 W3 (#9828): client profitability over issued
+  // invoice lines and time entries. Business type (msp_staff, partner
+  // capable); never portal-visible.
+  'client_profitability',
 ] as const satisfies readonly string[];
 
 export type ReportType = (typeof REPORT_TYPES)[number];
@@ -73,6 +77,7 @@ export const BUSINESS_REPORT_TYPES = [
   'ai_usage_by_client',
   'mrr_renewals',
   'quote_win_rate',
+  'client_profitability',
 ] as const satisfies readonly ReportType[];
 
 export type BusinessReportType = (typeof BUSINESS_REPORT_TYPES)[number];
@@ -92,6 +97,8 @@ export const BUSINESS_REPORT_REQUIRED_PERMISSIONS = {
   ai_usage_by_client: [PERMISSION_GRANTS.INVOICES_READ, PERMISSION_GRANTS.AI_SESSIONS_READ_ALL],
   mrr_renewals: [PERMISSION_GRANTS.CONTRACTS_READ],
   quote_win_rate: [PERMISSION_GRANTS.QUOTES_READ],
+  // Billed money and cost snapshots AND every technician's hours.
+  client_profitability: [PERMISSION_GRANTS.INVOICES_READ, PERMISSION_GRANTS.TIME_ENTRIES_READ],
 } as const satisfies Record<BusinessReportType, readonly PermissionGrant[]>;
 
 const REPORT_TYPE_SET: ReadonlySet<string> = new Set(REPORT_TYPES);

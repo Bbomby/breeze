@@ -341,6 +341,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR e renovações",
         "quote_win_rate": "Taxa de ganho de orçamentos",
+        "client_profitability": "Lucratividade por cliente",
         "backup_status": "Status do backup"
       },
       "threatDetection": {
@@ -446,6 +447,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR e renovações",
         "quote_win_rate": "Taxa de ganho de orçamentos",
+        "client_profitability": "Lucratividade por cliente",
         "backup_status": "Status do backup"
       },
       "runsTable": {
@@ -997,6 +999,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR e renovações",
         "quote_win_rate": "Taxa de ganho de orçamentos",
+        "client_profitability": "Lucratividade por cliente",
         "backup_status": "Status do backup"
       },
       "schedules": {
@@ -1077,6 +1080,10 @@
         "quote_win_rate": {
           "name": "Taxa de ganho de orçamentos",
           "description": "A parcela dos orçamentos enviados que foram ganhos, contada por oportunidade, de modo que um orçamento revisado e reenviado conta uma só vez. A taxa principal considera apenas as oportunidades decididas, com a quantidade ainda em aberto ao lado. Os valores são antes dos impostos, um conjunto por moeda, sem conversão."
+        },
+        "client_profitability": {
+          "name": "Lucratividade por cliente",
+          "description": "Receita faturada por cliente no período, por fonte (recorrente, mão de obra, produtos, IA, outros), com as horas registradas e uma estimativa opcional do custo de mão de obra a partir de uma única taxa horária. Os valores que usam essa taxa são identificados como estimativas. Um conjunto de totais por moeda, nunca convertido."
         },
         "backup_status": {
           "name": "Relatório de status de backup",
@@ -1225,6 +1232,21 @@
         "currency": "Moeda"
       },
       "periodNote": "O período se aplica à data em que o orçamento foi enviado pela primeira vez. Um orçamento revisado e reenviado conta uma só vez, como uma oportunidade.",
+      "cancel": "Cancelar",
+      "createReport": "Criar relatório"
+    },
+    "clientProfitabilityOptions": {
+      "groupBy": "Agrupar por",
+      "groupByDefault": "Padrão para o escopo do relatório",
+      "groupByValues": {
+        "organization": "Organização",
+        "source": "Fonte"
+      },
+      "groupByHelp": "Por padrão, agrupa por organização em um relatório de todas as organizações e por fonte em uma única organização.",
+      "laborEnabled": "Estimar o custo de mão de obra",
+      "laborAmount": "Custo de mão de obra por hora",
+      "laborCurrency": "Moeda",
+      "laborHelp": "Uma única taxa para todos os técnicos. Os valores que a usam são identificados como estimativas.",
       "cancel": "Cancelar",
       "createReport": "Criar relatório"
     },

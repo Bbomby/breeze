@@ -39,7 +39,7 @@ const NO_INVOICES_PERMISSIONS = [
 ];
 /** The types NO_INVOICES_PERMISSIONS cannot see: every type that needs
  *  invoices:read. ai_usage_by_client (#7608) needs it too. */
-const INVOICE_GATED_TYPES = ['ar_aging', 'ai_usage_by_client'];
+const INVOICE_GATED_TYPES = ['ar_aging', 'ai_usage_by_client', 'client_profitability'];
 /** reports:* plus everything a business type needs EXCEPT contracts:read (#9828). */
 const NO_CONTRACTS_PERMISSIONS = [
   { resource: 'reports', action: '*' },
@@ -358,7 +358,7 @@ function orgRun(type: string) {
   };
 }
 
-const BUSINESS = ['ar_aging', 'technician_time_billability', 'ticket_sla_attainment', 'mrr_renewals', 'quote_win_rate'] as const;
+const BUSINESS = ['ar_aging', 'technician_time_billability', 'ticket_sla_attainment', 'mrr_renewals', 'quote_win_rate', 'client_profitability'] as const;
 
 /** True when `where` carries `reports.type NOT IN (…)` binding every business type. */
 function excludesBusinessTypes(where: unknown): boolean {
@@ -719,6 +719,42 @@ describe('#9828 W2: quote_win_rate is gated on quotes:read', () => {
   it('positive control: with quotes:read the definition is served and lists are unfiltered', async () => {
     state.permissions = { permissions: [...NO_QUOTES_PERMISSIONS, { resource: 'quotes', action: 'read' }] };
     state.rows = [orgDefinition('quote_win_rate'), orgDefinition('quote_win_rate'), null];
+    expect((await app().request(`/reports/${REPORT_ID}`)).status).toBe(200);
+    state.wheres = [];
+    state.rows = [{ count: 0 }, null];
+    await app().request('/reports');
+    expect(notInTypes(state.wheres[0])).toEqual([]);
+  });
+});
+
+describe('#9828 W3: client_profitability is gated on invoices:read AND time_entries:read', () => {
+  /** reports:* plus every business grant EXCEPT time_entries:read. */
+  const NO_TIME_ENTRIES_PERMISSIONS = [
+    ...NO_INVOICES_PERMISSIONS.filter((p) => p.resource !== 'time_entries'),
+    { resource: 'invoices', action: 'read' },
+  ];
+  /** technician_time_billability needs time_entries:read too; REPORT_TYPES order. */
+  const TIME_GATED = ['technician_time_billability', 'client_profitability'];
+
+  beforeEach(() => {
+    state.auth = partnerAuth('selected');
+    state.permissions = { permissions: NO_TIME_ENTRIES_PERMISSIONS };
+  });
+
+  it('without time_entries:read: GET /reports/:id → 404 and lists exclude the time-gated types only', async () => {
+    state.rows = [orgDefinition('client_profitability'), orgDefinition('client_profitability'), null];
+    const res = await app().request(`/reports/${REPORT_ID}`);
+    expect(notInTypes(state.wheres[0])).toEqual(TIME_GATED);
+    expect(res.status).toBe(404);
+    state.wheres = [];
+    state.rows = [{ count: 0 }, null];
+    await app().request('/reports');
+    expect(notInTypes(state.wheres[0])).toEqual(TIME_GATED);
+  });
+
+  it('positive control: with time_entries:read the definition is served and lists are unfiltered', async () => {
+    state.permissions = { permissions: [...NO_TIME_ENTRIES_PERMISSIONS, { resource: 'time_entries', action: 'read' }] };
+    state.rows = [orgDefinition('client_profitability'), orgDefinition('client_profitability'), null];
     expect((await app().request(`/reports/${REPORT_ID}`)).status).toBe(200);
     state.wheres = [];
     state.rows = [{ count: 0 }, null];

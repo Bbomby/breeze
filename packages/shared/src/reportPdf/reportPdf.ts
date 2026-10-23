@@ -26,7 +26,8 @@ import * as arAgingPdf from './arAgingPdf';
 import * as aiUsageByClientPdf from './aiUsageByClientPdf';
 import * as mrrRenewalsPdf from './mrrRenewalsPdf';
 import * as quoteWinRatePdf from './quoteWinRatePdf';
-import type { TicketSlaSummary, TechnicianTimeSummary, ArAgingSummary, AiUsageByClientSummary, MrrRenewalsSummary, QuoteWinRateSummary } from '../types/businessReports';
+import * as clientProfitabilityPdf from './clientProfitabilityPdf';
+import type { TicketSlaSummary, TechnicianTimeSummary, ArAgingSummary, AiUsageByClientSummary, MrrRenewalsSummary, QuoteWinRateSummary, ClientProfitabilitySummary } from '../types/businessReports';
 import {
   NARRATIVE_BULLET_MAX_CHARS,
   NARRATIVE_HEADLINE_MAX_CHARS,
@@ -164,7 +165,7 @@ export type BuildOpts = {
   /** IANA timezone for formatting ISO date cells in generic tables. */
   timezone: string;
   summary?: PostureSummary | ExecutiveSummary | OrgNarrativeReportSummary | FleetDesignReportSummary | HardwareLifecycleSummary | ThreatDetectionSummary | EndpointManagementSummary | VulnerabilityManagementSummary | IdentityAccessSummary
-    | TicketSlaSummary | TechnicianTimeSummary | ArAgingSummary | AiUsageByClientSummary | MrrRenewalsSummary | QuoteWinRateSummary | BackupStatusReportData;
+    | TicketSlaSummary | TechnicianTimeSummary | ArAgingSummary | AiUsageByClientSummary | MrrRenewalsSummary | QuoteWinRateSummary | ClientProfitabilitySummary | BackupStatusReportData;
   /** Slim baseline from the previous completed run, when the caller supplied
    * one (report_runs.result.previous) — drives the scorecard trend chip and
    * its "since <date>" label. */
@@ -186,6 +187,7 @@ const DESIGNED_BUSINESS_TYPES: ReadonlySet<string> = new Set([
   'ai_usage_by_client',
   'mrr_renewals',
   'quote_win_rate',
+  'client_profitability',
 ]);
 
 const PAGE = { w: 297, h: 210, mx: 14, bandH: 19, footY: 199 } as const;
@@ -219,6 +221,7 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
   ai_usage_by_client: 'AI Usage by Client',
   mrr_renewals: 'MRR & Renewals',
   quote_win_rate: 'Quote Win Rate',
+  client_profitability: 'Client Profitability',
 };
 
 const reportTypeLabel = (t: string): string => REPORT_TYPE_LABELS[t] ?? titleCase(t);
@@ -2444,6 +2447,33 @@ function buildReportPdfWithPalette(rows: unknown[], opts: BuildOpts): jsPDF {
         contactEmail: opts.branding?.contactEmail ?? null,
         contactName: opts.branding?.contactName ?? null,
         previous: opts.previous,
+      },
+      {
+        C,
+        PAGE,
+        drawHeaderBand: (d) => drawHeaderBand(d, opts),
+        drawFooter: (d) => drawFooter(d, opts),
+        drawTitleBlock,
+        drawSectionHeading,
+      },
+    );
+  } else if (
+    opts.reportType === 'client_profitability'
+    && opts.summary
+    && Array.isArray((opts.summary as ClientProfitabilitySummary).byCurrency)
+    && Array.isArray((opts.summary as ClientProfitabilitySummary).orgs)
+    && Array.isArray((opts.summary as ClientProfitabilitySummary).sources)
+  ) {
+    drawHeaderBand(doc, opts);
+    drawFooter(doc, opts);
+    clientProfitabilityPdf.renderClientProfitabilityReport(
+      doc,
+      opts.summary as ClientProfitabilitySummary,
+      {
+        generatedAt: opts.generatedAt,
+        partnerName: opts.branding?.name ?? null,
+        contactEmail: opts.branding?.contactEmail ?? null,
+        contactName: opts.branding?.contactName ?? null,
       },
       {
         C,

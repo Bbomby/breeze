@@ -43,6 +43,9 @@ export class ReportsPage {
   quoteWinRatePeriod = () => this.page.getByTestId('quote-win-rate-period');
   quoteWinRateGroupBy = () => this.page.getByTestId('quote-win-rate-group-by');
   quoteWinRateCreate = () => this.page.getByTestId('quote-win-rate-create-report');
+  clientProfitabilityLaborEnabled = () => this.page.getByTestId('client-profitability-labor-enabled');
+  clientProfitabilityLaborAmount = () => this.page.getByTestId('client-profitability-labor-amount');
+  clientProfitabilityCreate = () => this.page.getByTestId('client-profitability-create-report');
 
   // Reports list — saved reports tab
   savedTab = () => this.page.getByTestId('reports-tab-saved');

@@ -70,6 +70,10 @@ export const reportTypeEnum = pgEnum('report_type', [
   // Business reports phase 2 W2 (#9828): quote win rate over revision
   // lineages; see services/businessReports/quoteWinRateReport.ts.
   'quote_win_rate',
+  // Business reports phase 2 W3 (#9828): per-client billed revenue, cost
+  // snapshot coverage, hours and an optional labor estimate; see
+  // services/businessReports/clientProfitabilityReport.ts.
+  'client_profitability',
 ]);
 
 export const reportScheduleEnum = pgEnum('report_schedule', [

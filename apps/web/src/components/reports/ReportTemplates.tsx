@@ -11,6 +11,7 @@ import {
   KeyRound,
   Laptop,
   Loader2,
+  PiggyBank,
   Plus,
   Repeat,
   ShieldAlert,
@@ -96,6 +97,13 @@ import {
   quoteWinRateOptionsFromConfig,
   type QuoteWinRateOptions,
 } from './QuoteWinRateOptionsForm';
+import {
+  DEFAULT_CLIENT_PROFITABILITY_OPTIONS,
+  ClientProfitabilityOptionsForm,
+  clientProfitabilityConfigFromOptions,
+  clientProfitabilityOptionsFromConfig,
+  type ClientProfitabilityOptions,
+} from './ClientProfitabilityOptionsForm';
 import type { ReportFormat, ReportSchedule } from './ReportsList';
 import { fetchWithAuth } from '../../stores/auth';
 import { OrgPickerField, useReportTargetOrg } from './OrgPickerField';
@@ -185,6 +193,7 @@ const reportTypeValues: TemplateReportType[] = [
   'ai_usage_by_client',
   'mrr_renewals',
   'quote_win_rate',
+  'client_profitability',
   'devices',
   'alerts',
   'patches',
@@ -283,6 +292,21 @@ const defaultTemplates: ReportTemplate[] = [
     },
     icon: Trophy,
     tone: { iconBg: 'bg-amber-500/15', iconColor: 'text-amber-600' },
+    group: 'business'
+  },
+  {
+    id: 'client_profitability',
+    name: 'Client profitability',
+    description:
+      'Billed revenue per client for the period by source (recurring, labor, product, AI, other), with the hours logged against it and an optional labor-cost estimate from one blended hourly rate. Figures using that rate are labelled as estimates. One set of totals per currency, never converted.',
+    defaults: {
+      name: 'Client profitability',
+      type: 'client_profitability',
+      schedule: 'monthly',
+      format: 'pdf'
+    },
+    icon: PiggyBank,
+    tone: { iconBg: 'bg-lime-500/15', iconColor: 'text-lime-600' },
     group: 'business'
   },
   {
@@ -642,7 +666,7 @@ function businessDefaultRange(template: ReportTemplate, t: (key: string) => stri
       ? saved.asOf
       : t('reports.reportTemplates.spec.asOfRunDate');
   }
-  if (type === 'ticket_sla_attainment' || type === 'technician_time_billability' || type === 'ai_usage_by_client' || type === 'quote_win_rate') {
+  if (type === 'ticket_sla_attainment' || type === 'technician_time_billability' || type === 'ai_usage_by_client' || type === 'quote_win_rate' || type === 'client_profitability') {
     switch (periodKind) {
       case 'last_full_month': return t('reports.reportPeriod.kinds.last_full_month');
       case 'last_30_days': return t('reports.reportPeriod.kinds.last_30_days');
@@ -729,6 +753,7 @@ export default function ReportTemplates() {
   const [aiUsageOptions, setAiUsageOptions] = useState<AiUsageByClientOptions>(DEFAULT_AI_USAGE_BY_CLIENT_OPTIONS);
   const [mrrRenewalsOptions, setMrrRenewalsOptions] = useState<MrrRenewalsOptions>(DEFAULT_MRR_RENEWALS_OPTIONS);
   const [quoteWinRateOptions, setQuoteWinRateOptions] = useState<QuoteWinRateOptions>(DEFAULT_QUOTE_WIN_RATE_OPTIONS);
+  const [clientProfitabilityOptions, setClientProfitabilityOptions] = useState<ClientProfitabilityOptions>(DEFAULT_CLIENT_PROFITABILITY_OPTIONS);
   // Create-only ownership for the business modal. The selector renders only
   // for a resolved partner-scope token; everyone else creates org-owned.
   const {
@@ -1013,6 +1038,7 @@ export default function ReportTemplates() {
         setAiUsageOptions(saved ? aiUsageByClientOptionsFromConfig(saved) : DEFAULT_AI_USAGE_BY_CLIENT_OPTIONS);
         setMrrRenewalsOptions(saved ? mrrRenewalsOptionsFromConfig(saved) : DEFAULT_MRR_RENEWALS_OPTIONS);
         setQuoteWinRateOptions(saved ? quoteWinRateOptionsFromConfig(saved) : DEFAULT_QUOTE_WIN_RATE_OPTIONS);
+        setClientProfitabilityOptions(saved ? clientProfitabilityOptionsFromConfig(saved) : DEFAULT_CLIENT_PROFITABILITY_OPTIONS);
         setOwnerScope(defaultOwnerScope);
         setBusinessTemplate(template);
         return;
@@ -1101,6 +1127,18 @@ export default function ReportTemplates() {
             submitLabel={t('reports.quoteWinRateOptions.createReport')}
             onSubmit={() => {
               void handleCreateDirect(template, quoteWinRateConfigFromOptions(quoteWinRateOptions), effectiveOwnerScope);
+            }}
+          />
+        );
+      case 'client_profitability':
+        return (
+          <ClientProfitabilityOptionsForm
+            {...shared}
+            value={clientProfitabilityOptions}
+            onChange={setClientProfitabilityOptions}
+            submitLabel={t('reports.clientProfitabilityOptions.createReport')}
+            onSubmit={() => {
+              void handleCreateDirect(template, clientProfitabilityConfigFromOptions(clientProfitabilityOptions), effectiveOwnerScope);
             }}
           />
         );

@@ -341,6 +341,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR y renovaciones",
         "quote_win_rate": "Tasa de éxito de cotizaciones",
+        "client_profitability": "Rentabilidad por cliente",
         "backup_status": "Estado de respaldo"
       },
       "threatDetection": {
@@ -446,6 +447,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR y renovaciones",
         "quote_win_rate": "Tasa de éxito de cotizaciones",
+        "client_profitability": "Rentabilidad por cliente",
         "backup_status": "Estado de respaldo"
       },
       "runsTable": {
@@ -997,6 +999,7 @@
         "ai_usage_by_client": "Uso de IA por cliente",
         "mrr_renewals": "MRR y renovaciones",
         "quote_win_rate": "Tasa de éxito de cotizaciones",
+        "client_profitability": "Rentabilidad por cliente",
         "backup_status": "Estado de respaldo"
       },
       "schedules": {
@@ -1077,6 +1080,10 @@
         "quote_win_rate": {
           "name": "Tasa de éxito de cotizaciones",
           "description": "La proporción de cotizaciones enviadas que se ganaron, contada por oportunidad, de modo que una cotización revisada y reenviada cuenta una sola vez. La tasa principal incluye solo las oportunidades resueltas, con la cantidad aún abierta al lado. Los valores son antes de impuestos, un conjunto por moneda, sin conversión."
+        },
+        "client_profitability": {
+          "name": "Rentabilidad por cliente",
+          "description": "Ingresos facturados por cliente en el período, por fuente (recurrentes, mano de obra, productos, IA, otros), con las horas registradas y una estimación opcional del costo laboral a partir de una tarifa por hora única. Las cifras que usan esa tarifa se rotulan como estimaciones. Un conjunto de totales por moneda, nunca convertido."
         },
         "backup_status": {
           "name": "Informe de estado de respaldo",
@@ -1225,6 +1232,21 @@
         "currency": "Moneda"
       },
       "periodNote": "El período se aplica a la fecha en que se envió la cotización por primera vez. Una cotización revisada y reenviada cuenta una sola vez, como una oportunidad.",
+      "cancel": "Cancelar",
+      "createReport": "Crear informe"
+    },
+    "clientProfitabilityOptions": {
+      "groupBy": "Agrupar por",
+      "groupByDefault": "Predeterminado según el alcance del informe",
+      "groupByValues": {
+        "organization": "Organización",
+        "source": "Fuente"
+      },
+      "groupByHelp": "Por defecto se agrupa por organización en un informe de todas las organizaciones y por fuente en una sola organización.",
+      "laborEnabled": "Estimar el costo laboral",
+      "laborAmount": "Costo laboral por hora",
+      "laborCurrency": "Moneda",
+      "laborHelp": "Una tarifa única para todos los técnicos. Las cifras que la usan se rotulan como estimaciones.",
       "cancel": "Cancelar",
       "createReport": "Crear informe"
     },

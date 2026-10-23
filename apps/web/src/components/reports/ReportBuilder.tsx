@@ -263,6 +263,8 @@ const legacyToBuilderType: Record<LegacyReportType, BuilderReportType> = {
   mrr_renewals: 'activity',
   // quote_win_rate: curated, own options form, partner capable.
   quote_win_rate: 'activity',
+  // client_profitability: curated, own options form (period, group-by, labor rate).
+  client_profitability: 'activity',
   // Backup Status Report (#6013 W05) — same reasoning as Hardware Lifecycle:
   // delivered only via its own curated template and options form
   // (BackupStatusOptionsForm.tsx). Mapping to the devices source keeps this
