@@ -4754,6 +4754,7 @@
     "actions": "Aktionen",
     "noRolesFoundTryAdjustingYourSearchOrFilters": "Keine Rollen gefunden. Versuchen Sie, Ihre Suche oder Filter anzupassen.",
     "cloneRole": "Klonrolle: {{name}}",
+    "cloneDescription": "Kopie von {{name}}",
     "clone": "Klonen",
     "edit": "Bearbeiten",
     "delete": "Löschen",
