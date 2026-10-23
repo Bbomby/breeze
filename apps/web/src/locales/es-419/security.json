@@ -1334,17 +1334,18 @@
   },
   "sensitiveDataCreateScanModal": {
     "errors": {
-      "deviceRequired": "Ingrese al menos un dispositivo ID",
-      "createScan": "No se pudo crear el escaneo"
+      "createScan": "No se pudo crear el escaneo",
+      "devicesRequired": "Selecciona al menos un dispositivo",
+      "devicesNotReady": "La lista de dispositivos aún se está cargando o está incompleta. Espera a que termine e inténtalo de nuevo.",
+      "devicesLoadFailed": "No se pudo cargar la lista de dispositivos. Usa Reintentar en la lista de dispositivos e inténtalo de nuevo."
     },
     "title": "Crear escaneo",
     "form": {
       "policyOptional": "Política (opcional)",
       "noPolicy": "Sin política (configuración manual)",
-      "deviceIds": "ID de dispositivo",
-      "deviceIdsHelp": "Un UUID por línea o separados por comas.",
-      "deviceIdsPlaceholder": "device-uuid-1\ndevice-uuid-2",
-      "detectionClasses": "Clases de detección"
+      "detectionClasses": "Clases de detección",
+      "devices": "Dispositivos",
+      "devicesHelp": "Elige los dispositivos que quieres escanear."
     },
     "actions": {
       "creating": "Creando...",
@@ -1409,6 +1410,10 @@
       "showingSearch": "Mostrando {{visible}} de {{pageCount}} en esta página ({{total}} en total)",
       "showingTotal": "Mostrando {{visible}} de los hallazgos de {{total}}",
       "pageOf": "Página {{page}} de {{totalPages}}"
+    },
+    "toasts": {
+      "riskAccepted": "Riesgo aceptado",
+      "markedFalsePositive": "Marcado como falso positivo"
     }
   },
   "sensitiveDataPoliciesTab": {
@@ -1447,14 +1452,18 @@
       "detectionClasses": "Clases de detección",
       "scheduleType": "Tipo de horario",
       "intervalMinutes": "Intervalo (minutos)",
-      "cronExpression": "Expresión cron",
-      "cronPlaceholder": "0 2 * * *"
+      "cronPlaceholder": "0 2 * * *",
+      "cronExpressionUtc": "Expresión cron (UTC)",
+      "cronNextRun": "Próxima ejecución (tu hora local): {{time}}",
+      "cronExpressionZone": "Expresión cron ({{zone}})"
     },
     "schedule": {
       "manual": "Manual",
       "interval": "Intervalo",
       "cron": "Cron",
-      "everyMinutes": "Cada {{minutes}}m"
+      "everyMinutes": "Cada {{minutes}}m",
+      "paused": "En pausa",
+      "pausedTitle": "La programación está desactivada para esta política, por lo que no se ejecutará automáticamente"
     },
     "table": {
       "name": "Nombre",
@@ -2300,5 +2309,8 @@
       "awaitingEvaluation": "En espera de evaluación",
       "vendorOrgMismatch": "El proveedor informa otra organización"
     }
+  },
+  "sensitiveDataAccess": {
+    "noOrgAccess": "No tienes acceso a esta organización"
   }
 }

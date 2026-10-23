@@ -1334,17 +1334,18 @@
   },
   "sensitiveDataCreateScanModal": {
     "errors": {
-      "deviceRequired": "En az bir cihaz kimliğini girin",
-      "createScan": "Tarama oluşturulamadı"
+      "createScan": "Tarama oluşturulamadı",
+      "devicesRequired": "En az bir cihaz seçin",
+      "devicesNotReady": "Cihaz listesi hâlâ yükleniyor veya eksik. Tamamlanmasını bekleyin ve tekrar deneyin.",
+      "devicesLoadFailed": "Cihaz listesi yüklenemedi. Cihaz listesindeki Yeniden dene düğmesini kullanın, ardından tekrar deneyin."
     },
     "title": "Tarama Oluştur",
     "form": {
       "policyOptional": "Politika (isteğe bağlı)",
       "noPolicy": "Politika yok (manuel yapılandırma)",
-      "deviceIds": "Cihaz Kimlikleri",
-      "deviceIdsHelp": "Satır başına bir UUID veya virgülle ayrılmış.",
-      "deviceIdsPlaceholder": "cihaz-uuid-1\ncihaz-uuid-2",
-      "detectionClasses": "Algılama Sınıfları"
+      "detectionClasses": "Algılama Sınıfları",
+      "devices": "Cihazlar",
+      "devicesHelp": "Taranacak cihazları seçin."
     },
     "actions": {
       "creating": "Oluşturuluyor...",
@@ -1409,6 +1410,10 @@
       "showingSearch": "Bu sayfada {{pageCount}} / {{visible}} gösteriliyor (toplam {{total}})",
       "showingTotal": "{{total}} bulgulardan {{visible}} gösteriliyor",
       "pageOf": "Sayfa {{page}} / {{totalPages}}"
+    },
+    "toasts": {
+      "riskAccepted": "Risk kabul edildi",
+      "markedFalsePositive": "Yanlış pozitif olarak işaretlendi"
     }
   },
   "sensitiveDataPoliciesTab": {
@@ -1447,14 +1452,18 @@
       "detectionClasses": "Algılama Sınıfları",
       "scheduleType": "Zamanlama Türü",
       "intervalMinutes": "Aralık (dakika)",
-      "cronExpression": "Cron İfadesi",
-      "cronPlaceholder": "0 2 * * *"
+      "cronPlaceholder": "0 2 * * *",
+      "cronExpressionUtc": "Cron İfadesi (UTC)",
+      "cronNextRun": "Sonraki çalışma (yerel saatiniz): {{time}}",
+      "cronExpressionZone": "Cron İfadesi ({{zone}})"
     },
     "schedule": {
       "manual": "Manuel",
       "interval": "Aralık",
       "cron": "Cron",
-      "everyMinutes": "Her {{minutes}}m"
+      "everyMinutes": "Her {{minutes}}m",
+      "paused": "Duraklatıldı",
+      "pausedTitle": "Bu ilke için zamanlama kapalı, bu yüzden otomatik olarak çalışmayacak"
     },
     "table": {
       "name": "Ad",
@@ -2300,5 +2309,8 @@
       "awaitingEvaluation": "Değerlendirme bekleniyor",
       "vendorOrgMismatch": "Sağlayıcı farklı bir kuruluş bildiriyor"
     }
+  },
+  "sensitiveDataAccess": {
+    "noOrgAccess": "Bu kuruluşa erişiminiz yok"
   }
 }
