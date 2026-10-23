@@ -21,7 +21,7 @@ interface SecurityStatCardProps {
   interactive?: boolean;
   /** Selected treatment when the card's filter preset is currently applied. */
   active?: boolean;
-  /** Optional data-testid for the card root. */
+  /** Stable E2E hook on the card root. */
   testId?: string;
 }
 export default function SecurityStatCard({
