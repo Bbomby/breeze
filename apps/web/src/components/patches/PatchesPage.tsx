@@ -111,8 +111,7 @@ export default function PatchesPage() {
   const { can } = usePermissions();
   const canScan = can('devices', 'execute'); // UX gate; POST /patches/scan requires devices.execute
   const stableT = useStableT(t); // #3632: effect-safe translator; JSX keeps `t`
-  const { organizations, currentOrgId } = useOrgStore();
-  const currentOrg = organizations.find(o => o.id === currentOrgId) ?? null;
+  const { organizations } = useOrgStore();
   // Reactive claims, not the one-shot getJwtClaims(): access tokens are never
   // persisted, so on a cold load the store is empty at first paint and only
   // fills once the refresh cookie has been exchanged (#4010).
@@ -1052,7 +1051,7 @@ export default function PatchesPage() {
         open={modalOpen}
         patch={selectedPatch}
         ringId={selectedRingId}
-        orgName={currentOrg?.name ?? null}
+        ringName={selectedRingId ? (rings.find(r => r.id === selectedRingId)?.name ?? null) : null}
         ringDeviceCount={selectedRingId ? (rings.find(r => r.id === selectedRingId)?.deviceCount ?? null) : null}
         initialAction={modalInitialAction}
         onClose={() => {
