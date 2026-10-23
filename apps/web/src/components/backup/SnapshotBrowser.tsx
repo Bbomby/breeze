@@ -17,6 +17,7 @@ import { formatDateTime as formatUserDateTime } from '@/lib/dateTimeFormat';
 import { fetchWithAuth } from '../../stores/auth';
 import HashLink from '../shared/HashLink';
 import { buildRestoreHash } from './restoreHash';
+import SnapshotIntegrityBadge, { snapshotIntegrityTone } from './SnapshotIntegrityBadge';
 import {
   LARGE_FOLDER_SELECTION_THRESHOLD,
   folderCheckState,
@@ -60,6 +61,8 @@ type Snapshot = {
   requestedImmutabilityEnforcement: 'application' | 'provider' | null;
   immutabilityFallbackReason: string | null;
   retentionBlockedReason?: 'legal_hold' | 'immutable_until' | null;
+  // GET /backup/snapshots; absent on an older API.
+  integrityStatus?: string | null;
   bareMetalRestorable?: boolean | null;
   bareMetalReasons?: string[] | null;
   // Set from GET /snapshots/:id/browse: the snapshot recorded files but has no
@@ -127,6 +130,11 @@ function formatDateTime(value: string | null | undefined): string {
 
 export default function SnapshotBrowser() {
   const { t } = useTranslation('backup');
+  // <option> text cannot hold the badge element, so the picker spells the status out.
+  const integrityLabel = (status?: string | null): string | null => {
+    const tone = snapshotIntegrityTone(status);
+    return tone ? t(/* i18n-dynamic */ `snapshotIntegrityBadge.${tone}`) : null;
+  };
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -341,8 +349,8 @@ export default function SnapshotBrowser() {
       .map((item) => ({
         id: item.path,
         name: item.name,
-        size: typeof item.sizeBytes === 'number' ? `${item.sizeBytes} B` : undefined,
-        modified: item.modifiedAt,
+        size: typeof item.sizeBytes === 'number' ? formatBytes(item.sizeBytes) : undefined,
+        modified: item.modifiedAt ? formatDateTime(item.modifiedAt) : undefined,
       })),
     [dirs, selectedFolder]
   );
@@ -521,6 +529,7 @@ export default function SnapshotBrowser() {
               {snapshots.map((snapshot) => (
                 <option key={snapshot.id} value={snapshot.id}>
                   {snapshotOptionLabel(snapshot)}
+                  {integrityLabel(snapshot.integrityStatus) ? ` — ${integrityLabel(snapshot.integrityStatus)}` : ''}
                 </option>
               ))}
             </select>
@@ -538,6 +547,7 @@ export default function SnapshotBrowser() {
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-foreground">{selectedSnapshotDisplayLabel}</span>
+                <SnapshotIntegrityBadge status={selectedSnapshot.integrityStatus} />
                 {selectedSnapshot.deviceName && (
                   <span data-testid="snapshot-device-name" className="text-sm text-muted-foreground">
                     {selectedSnapshot.deviceName}
