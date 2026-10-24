@@ -312,7 +312,7 @@ export const TIER1_READ_ACTIONS: Record<string, readonly string[]> = {
   manage_service_monitors: ['list'],
   manage_software_policies: ['list', 'get'],
   manage_ticket_checklist: ['list', 'list_templates', 'get_template'],
-  manage_tickets: ['list', 'get', 'list_work_types', 'list_links'],
+  manage_tickets: ['list', 'get', 'list_work_types', 'list_links', 'merge_preview'],
   manage_update_rings: ['list', 'get'],
   query_agent_versions: ['list_versions', 'check_upgrades'],
   query_analytics: ['sla_compliance', 'capacity_predictions', 'sla_definitions'],
@@ -423,7 +423,7 @@ export const TIER3_ACTIONS: Record<string, string[]> = {
   manage_delivery: ['create_routing','update_routing','delete_routing','set_default','create_escalation','update_escalation','delete_escalation'],
   // Ticketing — move_org is a tenant-shape mutation and requires approval.
   // log_time_entry/start_timer/stop_timer downgraded to Tier 2 (2026-07-20).
-  manage_tickets: ['move_org'],
+  manage_tickets: ['move_org', 'merge'],
   // Money-authoring drafts vs money-moving actions (#2551): this boundary
   // tracks reversibility/external-commitment, not dollar amount. Drafting —
   // create_draft, add_manual_line, add_catalog_line, update, etc. — only
@@ -515,6 +515,8 @@ export const TIER3_FOUR_EYES_ACTIONS: Record<string, string[]> = {
   // resolved by resolveApprovalScope's override hook, not this static table.
   // See TIER3_INPUT_AWARE_ACTIONS.
   manage_organizations: ['create_org'],
+  // #8972: `merge` is Tier 3 (one approver, spec §5.7), not four-eyes: it is
+  // same-org, unlike move_org's re-tenanting.
   manage_tickets: ['move_org'],
   // Grants an AUTHORITY, not a device action: it converts "this agent must ask
   // a human for <opKey>" into "this agent may run <opKey> unattended for this
@@ -600,6 +602,10 @@ export const TIER3_SUPERVISED_ACTIONS: Record<string, string[]> = {
   // Supervised, not four_eyes: same class as a public ticket reply. list/get
   // resolve to Tier 1 (TIER1_ACTIONS) and never reach tier 3.
   send_endpoint_message: ['send'],
+  // #8972: merging two tickets of ONE org (spec §5.7: Tier 3, approval). It is
+  // irreversible, which is why it needs approval at all; it is not tenant-
+  // shaping like move_org (four_eyes), so one approver suffices.
+  manage_tickets: ['merge'],
   // complement of TIER3_FOUR_EYES_ACTIONS within TIER3_ACTIONS.
   file_operations: ['read', 'write', 'delete', 'mkdir', 'rename'],
   manage_services: ['start', 'stop', 'restart'],
@@ -1014,6 +1020,9 @@ export const TOOL_PERMISSIONS: Record<string, { resource: string; action: string
     edit_comment: { resource: 'tickets', action: 'write' },
     delete_comment: { resource: 'tickets', action: 'write' },
     move_org: { resource: 'tickets', action: 'write' },
+    // #8972: the staff routes gate both on tickets:write (routes/tickets/merge.ts).
+    merge_preview: { resource: 'tickets', action: 'write' },
+    merge: { resource: 'tickets', action: 'write' },
     log_time_entry: { resource: 'time_entries', action: 'write' },
     start_timer: { resource: 'time_entries', action: 'write' },
     stop_timer: { resource: 'time_entries', action: 'write' },
