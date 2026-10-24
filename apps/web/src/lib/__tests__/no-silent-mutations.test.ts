@@ -167,6 +167,9 @@ const TARGET_GLOBS = [
   // POST are advisory-then-destructive mutations against a partner's tenant
   // tree, so a silent failure here is exactly the class this guard exists for.
   'src/components/settings/MergeOrgModal.tsx',
+  // #9796: the bulk site move (POST /devices/bulk/site) — a multi-device tenant write that must
+  // never ride ChangeSiteModal.tsx's migration-backlog exemption.
+  'src/components/devices/bulkSiteMove.ts',
   // Org archive (org-lifecycle Wave 5), replacing the org delete flow: the
   // archive POST hides an org, uninstalls its agents, and stops its billing —
   // a silent failure here is exactly the class this guard exists for.
@@ -988,8 +991,9 @@ describe('no silent mutations in targeted set', () => {
     // Partner settings W2 (#9788) Task 21 adds partnerSettings/units/trustCenterUnit.ts: 262 → 263.
     // Partner settings W2 (#9788) Task 22 adds partnerSettings/units/{aiFeatureDefaultsUnit,aiDataPolicyUnit}.ts: 263 → 265.
     // Partner settings W2 (#9788) Task 24 adds settings/KnownGuestsSettings.tsx: 265 → 266.
-    // Wisp W06b (#9918) adds WispThreadPage/WispGrantPauseControl: 266 → 268.
-    expect(absoluteFiles.length).toBe(268);
+    // Wisp W06b (#9918) adds WispThreadPage/WispGrantPauseControl: 266 → 268;
+    // bulk site move (#9796) adds devices/bulkSiteMove.ts (+1 = 269).
+    expect(absoluteFiles.length).toBe(269);
     for (const f of absoluteFiles) {
       expect(() => statSync(f)).not.toThrow();
     }
