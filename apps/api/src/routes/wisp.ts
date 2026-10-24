@@ -12,8 +12,9 @@
  *   PATCH /grants/:id/settings        { budgetCentsPerDay?, floorTickMinutes? } → WispGrantDto (w00 A6)
  *
  *   /thread/*                       → W04 thread routes (routes/wispThreads.ts)
+ *   /concerns/*, /watches/*         → W05 triage routes (routes/wispConcerns.ts, routes/wispWatches.ts)
  *
- * Gates, in order, on EVERY route including /thread/*: authMiddleware → 404
+ * Gates, in order, on EVERY route including /thread/*, /concerns/*, /watches/*: authMiddleware → 404
  * while !wispEnabled() (read per request; the flag wins over the entitlement)
  * → partner scope → ai_sessions:use → requireEntitlement('wisp') (W04; w00
  * cross-wave reconciliation 1, spec §10 — pinned for every enumerated route by
@@ -28,8 +29,10 @@ import { runAfterDbContextCommit } from '../db';
 import { zValidator } from '../lib/validation';
 import { authMiddleware, requireMfa, requirePermission, requireScope, type AuthContext } from '../middleware/auth';
 import { requireEntitlement } from '../middleware/entitlement';
+import { EntitlementResolutionError } from '../services/entitlements';
 import { EVENT_TYPES, publishEvent } from '../services/eventBus';
 import { PERMISSIONS } from '../services/permissions';
+import { grantSettingsBounds } from '../services/wisp/budget';
 import {
   createGrant,
   GrantLimitReachedError,
@@ -43,7 +46,9 @@ import {
   WispGrantError,
   type WispGrant,
 } from '../services/wisp/grants';
+import { wispConcernsRoutes } from './wispConcerns';
 import { wispThreadRoutes } from './wispThreads';
+import { wispWatchesRoutes } from './wispWatches';
 
 /** Field-by-field wire shape: never `{...row}`, never the ceiling snapshot or factor proof. */
 export type WispGrantDto = {
@@ -90,6 +95,11 @@ const NOT_FOUND = { error: 'Wisp grant not found' } as const;
 function errorResponse(c: Context, err: unknown): Response {
   if (err instanceof GrantLimitReachedError) {
     return c.json({ error: `This partner already has ${err.active} active Wisp grants (plan limit ${err.maxGrants}).`, code: 'GRANT_LIMIT_REACHED' }, 409);
+  }
+  // W05 grantSettingsBounds reads entitlements directly; same body as the
+  // service's entitlement_check_failed below.
+  if (err instanceof EntitlementResolutionError) {
+    return errorResponse(c, new WispGrantError('entitlement_check_failed', 'Entitlement check temporarily unavailable.'));
   }
   if (!(err instanceof WispGrantError)) throw err;
   switch (err.code) {
@@ -246,11 +256,16 @@ wispRoutes.post('/grants/:id/resume', requireMfa(), async (c) => {
 });
 
 // Budget / tick are operational settings, not authority (w00 A6): no step-up.
+// Bounds are the partner's plan bounds (W05): ≤ 5× plan default and ≤ the
+// plan ceiling; floor tick ≥ max(15, plan minimum). A grant is only reachable
+// inside the caller's own partner (RLS), so auth.partnerId is its partner.
 wispRoutes.patch('/grants/:id/settings', requireMfa(), zValidator('json', settingsBody), async (c) => {
   const grantId = grantIdParam(c);
   if (!grantId) return c.json(NOT_FOUND, 404);
+  const auth = authOf(c);
   try {
-    return c.json(toDto(await updateGrantSettings({ auth: authOf(c), grantId, patch: c.req.valid('json') })));
+    const bounds = await grantSettingsBounds(auth.partnerId!);
+    return c.json(toDto(await updateGrantSettings({ auth, grantId, patch: c.req.valid('json'), bounds })));
   } catch (err) {
     return errorResponse(c, err);
   }
@@ -258,3 +273,6 @@ wispRoutes.patch('/grants/:id/settings', requireMfa(), zValidator('json', settin
 
 // W04: inherits every gate above (registered after the use('*') chain).
 wispRoutes.route('/thread', wispThreadRoutes);
+// W05: same inheritance.
+wispRoutes.route('/concerns', wispConcernsRoutes);
+wispRoutes.route('/watches', wispWatchesRoutes);
