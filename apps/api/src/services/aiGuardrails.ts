@@ -3499,11 +3499,19 @@ function describeChannelDestination(config: unknown): string | null {
   return parts.length > 0 ? parts.join('; ') : null;
 }
 
-/** "Wisp wants to run <kind> at <org>: <reason>" — plus the exact batch for a bulk reply (w00 A30). */
-function describeSpecialistRequest(input: Record<string, unknown>): string {
+/**
+ * "Wisp wants to run <kind> at <org>: <reason>" — plus the exact batch for a
+ * bulk reply (w00 A30). `orgName` is the name the chat gate resolved for the
+ * verified target org (#10144); without it the card says "this organization",
+ * never a raw id prefix a person cannot read.
+ */
+export function describeSpecialistRequest(input: Record<string, unknown>, orgName?: string | null): string {
   const kind = typeof input.kind === 'string' ? input.kind : '';
   const label = isSpecialistKind(kind) ? SPECIALIST_KIND_LABELS[kind] : 'a specialist';
-  const org = typeof input.orgId === 'string' ? input.orgId.slice(0, 8) : 'this organization';
+  // Tenant-controlled text on a card, a stored intent reason and a push: one
+  // line, bounded.
+  const name = orgName?.replace(/\s+/g, ' ').trim() ?? '';
+  const org = name ? (name.length > 80 ? `${name.slice(0, 80)}…` : name) : 'this organization';
   const reason = nonEmptyText(input.reason);
   let text = `Wisp wants to run ${label} at ${org}${reason ? `: ${reason}` : ''}`;
   const params = input.params && typeof input.params === 'object' ? input.params as Record<string, unknown> : {};
