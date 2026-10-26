@@ -102,7 +102,8 @@
     "specialists": {
       "heading_one": "Affidato a {{count}} specialista",
       "heading_other": "Affidato a {{count}} specialisti"
-    }
+    },
+    "loadEarlier": "Carica precedenti"
   },
   "aiChatSidebar": {
     "history": "Cronologia",
@@ -739,7 +740,10 @@
       "disabledBody": "Un amministratore partner ha disattivato Wisp in Impostazioni → Agenti AI. Le tue chat continuano a funzionare.",
       "disabledSettings": "Apri le impostazioni degli Agenti AI",
       "loadFailed": "Impossibile caricare la home di Wisp.",
-      "noAccess": "Non hai accesso a Wisp"
+      "noAccess": "Non hai accesso a Wisp",
+      "historyFailed": "Impossibile caricare questa conversazione.",
+      "refreshFailed": "Impossibile cercare nuovi post.",
+      "earlierFailed": "Impossibile caricare i messaggi precedenti."
     },
     "links": {
       "title": "Elementi collegati",
@@ -798,7 +802,9 @@
       "brief": "Riepilogo del mattino",
       "nudge": "Promemoria",
       "digest": "Riepilogo periodico",
-      "summary": "Sintesi"
+      "summary": "Sintesi",
+      "open": "Apri",
+      "unread": "Non letto"
     },
     "welcome": {
       "title": "Sto dando un’occhiata a {{scope}}.",

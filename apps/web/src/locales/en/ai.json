@@ -102,7 +102,8 @@
     "specialists": {
       "heading_one": "Handed to {{count}} specialist",
       "heading_other": "Handed to {{count}} specialists"
-    }
+    },
+    "loadEarlier": "Load earlier"
   },
   "aiChatSidebar": {
     "history": "History",
@@ -739,7 +740,10 @@
       "disabledBody": "A partner administrator turned Wisp off under Settings → AI Agents. Your chats still work.",
       "disabledSettings": "Open AI Agents settings",
       "loadFailed": "Could not load the Wisp home.",
-      "noAccess": "You don't have access to Wisp"
+      "noAccess": "You don't have access to Wisp",
+      "historyFailed": "Could not load this conversation.",
+      "refreshFailed": "Could not check for new posts.",
+      "earlierFailed": "Could not load earlier messages."
     },
     "links": {
       "title": "Linked items",
@@ -798,7 +802,9 @@
       "brief": "Morning brief",
       "nudge": "Nudge",
       "digest": "Digest",
-      "summary": "Summary"
+      "summary": "Summary",
+      "open": "Open",
+      "unread": "Unread"
     },
     "welcome": {
       "title": "I'm looking around {{scope}}.",
