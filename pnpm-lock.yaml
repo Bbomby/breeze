@@ -315,14 +315,14 @@ importers:
         specifier: ^9.12.1
         version: 9.12.1
       '@types/pdfkit':
-        specifier: ^0.17.6
-        version: 0.17.6
+        specifier: ^0.17.7
+        version: 0.17.7
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
       '@types/sanitize-html':
-        specifier: ^2.16.1
-        version: 2.16.1
+        specifier: ^2.16.2
+        version: 2.16.2
       '@types/semver':
         specifier: ^7.8.0
         version: 7.8.0
@@ -398,8 +398,8 @@ importers:
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@types/office-js':
-        specifier: ^1.0.612
-        version: 1.0.612
+        specifier: ^1.0.613
+        version: 1.0.613
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -803,8 +803,8 @@ importers:
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@types/office-js':
-        specifier: ^1.0.612
-        version: 1.0.612
+        specifier: ^1.0.613
+        version: 1.0.613
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -952,8 +952,8 @@ importers:
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@types/office-js':
-        specifier: ^1.0.612
-        version: 1.0.612
+        specifier: ^1.0.613
+        version: 1.0.613
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -1267,8 +1267,8 @@ importers:
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@types/office-js':
-        specifier: ^1.0.612
-        version: 1.0.612
+        specifier: ^1.0.613
+        version: 1.0.613
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -1492,8 +1492,8 @@ importers:
         specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@types/office-js':
-        specifier: ^1.0.612
-        version: 1.0.612
+        specifier: ^1.0.613
+        version: 1.0.613
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -5651,8 +5651,8 @@ packages:
   '@types/nodemailer@8.0.2':
     resolution: {integrity: sha512-c7M5ox8p0nEOfbJ2E9Qcmt8/QCu/VzsiAhzBiZbvky2PhKZDHpKB3sQHBM5MEZNkCfBOaS6S9//AGPRTNB7IaA==}
 
-  '@types/office-js@1.0.612':
-    resolution: {integrity: sha512-DSzRuv/6vBw63izl5yLOEW8lzn9aPBw6RtfpjFGqohxrQvTtRPnzlHIeonFYNfsjK0zRoGGwj3tiqzqI9+365Q==}
+  '@types/office-js@1.0.613':
+    resolution: {integrity: sha512-SYUWvTEqpkcAIFxtf0ThRVXN6cw4r7XleXl3ZEEdrgLnqFyUD251iG6COQ9VAsI3G44LYrQSSz1+4Ctgoqiiww==}
 
   '@types/oidc-provider@9.12.1':
     resolution: {integrity: sha512-qRJksCw0I+VloInJxMV/4L4gLL5Qrws9Np9+rW+MZeBKauEz5WqKO99OVCpnj4LKB/o1+utkHoQq1c3GBhuE5g==}
@@ -5660,8 +5660,8 @@ packages:
   '@types/pako@2.0.4':
     resolution: {integrity: sha512-VWDCbrLeVXJM9fihYodcLiIv0ku+AlOa/TQ1SvYOaBuyrSKgEcro95LJyIsJ4vSo6BXIxOKxiJAat04CmST9Fw==}
 
-  '@types/pdfkit@0.17.6':
-    resolution: {integrity: sha512-tIwzxk2uWKp0Cq9JIluQXJid77lYhF52EsIOwhsMF4iWLA6YneoBR1xVKYYdAysHuepUB0OX4tdwMiUDdGKmig==}
+  '@types/pdfkit@0.17.7':
+    resolution: {integrity: sha512-VMOZDWw7HtNtLbjIuHIhVArm9PlV0gxpz32jAl1IuXWlIgbr1lKFoTsrtvEzY8a9BIpQJEE5DwNPKD50otTs6g==}
 
   '@types/pg@8.23.1':
     resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
@@ -5692,8 +5692,8 @@ packages:
   '@types/readdir-glob@1.1.5':
     resolution: {integrity: sha512-raiuEPUYqXu+nvtY2Pe8s8FEmZ3x5yAH4VkLdihcPdalvsHltomrRC9BzuStrJ9yk06470hS0Crw0f1pXqD+Hg==}
 
-  '@types/sanitize-html@2.16.1':
-    resolution: {integrity: sha512-n9wjs8bCOTyN/ynwD8s/nTcTreIHB1vf31vhLMGqUPNHaweKC4/fAl4Dj+hUlCTKYgm4P3k83fmiFfzkZ6sgMA==}
+  '@types/sanitize-html@2.16.2':
+    resolution: {integrity: sha512-kuAbgDCFv418flrp3z4o/4ufLA/5ovmXRH0L419iZCPGO7w00znjeDI5Wy/KZWNIBpDQc7hucCK+J5almB6FyA==}
 
   '@types/sax@1.2.7':
     resolution: {integrity: sha512-rO73L89PJxeYM3s3pPPjiPgVVcymqU490g0YO5n5By0k2Erzj6tay/4lr1CHAAU4JyOWd1rpQ8bCf6cZfHU96A==}
@@ -7303,6 +7303,10 @@ packages:
 
   entities@8.0.0:
     resolution: {integrity: sha512-zwfzJecQ/Uej6tusMqwAqU/6KL2XaB2VZ2Jg54Je6ahNBGNH6Ek6g3jjNCF0fG9EWQKGZNddNjU5F1ZQn/sBnA==}
+    engines: {node: '>=20.19.0'}
+
+  entities@8.1.0:
+    resolution: {integrity: sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==}
     engines: {node: '>=20.19.0'}
 
   env-paths@3.0.0:
@@ -16696,7 +16700,7 @@ snapshots:
     dependencies:
       '@types/node': 26.6.5
 
-  '@types/office-js@1.0.612': {}
+  '@types/office-js@1.0.613': {}
 
   '@types/oidc-provider@9.12.1':
     dependencies:
@@ -16706,7 +16710,7 @@ snapshots:
 
   '@types/pako@2.0.4': {}
 
-  '@types/pdfkit@0.17.6':
+  '@types/pdfkit@0.17.7':
     dependencies:
       '@types/node': 26.6.5
 
@@ -16743,9 +16747,9 @@ snapshots:
     dependencies:
       '@types/node': 26.6.5
 
-  '@types/sanitize-html@2.16.1':
+  '@types/sanitize-html@2.16.2':
     dependencies:
-      htmlparser2: 10.1.0
+      htmlparser2: 12.0.0
 
   '@types/sax@1.2.7':
     dependencies:
@@ -18409,7 +18413,7 @@ snapshots:
     dependencies:
       domelementtype: 3.0.0
       domhandler: 6.0.1
-      entities: 8.0.0
+      entities: 8.1.0
 
   domelementtype@2.3.0: {}
 
@@ -18524,6 +18528,8 @@ snapshots:
   entities@7.0.1: {}
 
   entities@8.0.0: {}
+
+  entities@8.1.0: {}
 
   env-paths@3.0.0:
     optional: true
@@ -19802,7 +19808,7 @@ snapshots:
       domelementtype: 3.0.0
       domhandler: 6.0.1
       domutils: 4.0.2
-      entities: 8.0.0
+      entities: 8.1.0
 
   htmlparser2@8.0.2:
     dependencies:
