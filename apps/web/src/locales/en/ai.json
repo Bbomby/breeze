@@ -52,8 +52,7 @@
     "waiting": "Waiting for response...",
     "placeholder": "Ask about your devices...",
     "stopResponse": "Stop response",
-    "thinking": "AI is thinking... click stop to cancel",
-    "sendShortcut": "Cmd+Enter to send"
+    "send": "Send message"
   },
   "aiChatMessages": {
     "title": "Breeze AI",
@@ -88,6 +87,21 @@
         "label": "Recent activity",
         "prompt": "Show me the most recent audit log entries — what actions were taken in the last few hours?"
       }
+    },
+    "toolGroup": {
+      "done": "{{count}} done",
+      "failed_one": "{{count}} failed",
+      "failed_other": "{{count}} failed",
+      "expand": "Show details",
+      "collapse": "Hide details"
+    },
+    "divider": {
+      "today": "Today {{time}}",
+      "yesterday": "Yesterday {{time}}"
+    },
+    "specialists": {
+      "heading_one": "Handed to {{count}} specialist",
+      "heading_other": "Handed to {{count}} specialists"
     }
   },
   "aiChatSidebar": {
@@ -678,9 +692,6 @@
       "checkingUnnamed": "Checking a customer…"
     },
     "thread": {
-      "title": "Wisp thread",
-      "openChat": "Open in chat",
-      "openChatInactive": "Wisp must be active to chat on this thread.",
       "notFound": "This Wisp thread doesn't exist or isn't yours.",
       "loadFailed": "Couldn't load this Wisp thread.",
       "retry": "Try again",
@@ -700,11 +711,13 @@
         "memory": "Memory",
         "nudge": "Nudge",
         "brief": "Brief"
-      }
+      },
+      "show": "Show",
+      "hide": "Hide",
+      "count_one": "{{count}} recent",
+      "count_other": "{{count}} recent"
     },
     "home": {
-      "briefTitle": "This morning's brief",
-      "briefEmpty": "No brief yet. Wisp sends one each morning once it has had a look around.",
       "briefSentAt": "Sent {{time}}",
       "briefStale": "From an earlier day",
       "needsYouTitle": "Needs your attention",
@@ -712,7 +725,6 @@
       "needsYouCount_other": "{{count}} items",
       "needsYouApprovals_one": "{{count}} waiting for your approval",
       "needsYouApprovals_other": "{{count}} waiting for your approval",
-      "threadTitle": "Talk to Wisp",
       "threadPaused": "Wisp is paused. Resume it from the header to keep talking.",
       "threadEnded": "This delegation has ended. Start a new one to talk to Wisp.",
       "threadOpening": "Opening the conversation…",
@@ -781,6 +793,44 @@
       "saveFailed": "Could not change the Wisp setting.",
       "adminOnly": "Only partner administrators can change this.",
       "loadFailed": "Could not load the Wisp setting."
+    },
+    "post": {
+      "brief": "Morning brief",
+      "nudge": "Nudge",
+      "digest": "Digest",
+      "summary": "Summary"
+    },
+    "welcome": {
+      "title": "I'm looking around {{scope}}.",
+      "body": "Your first brief arrives each morning once I have had a look. Ask me anything in the meantime.",
+      "suggestions": {
+        "needsMe": {
+          "label": "What needs me today?",
+          "prompt": "What needs my attention today? Keep it short."
+        },
+        "offline": {
+          "label": "Which devices are offline?",
+          "prompt": "Which of my devices are offline right now?"
+        },
+        "sweep": {
+          "label": "Run a health sweep",
+          "prompt": "Run a health sweep on {{scope}} now."
+        },
+        "overnight": {
+          "label": "What happened overnight?",
+          "prompt": "What happened across my customers overnight?"
+        }
+      }
+    },
+    "rail": {
+      "workersTitle": "Workers",
+      "workersEmpty": "No specialists running.",
+      "allRuns": "All runs",
+      "details": "Details"
+    },
+    "composer": {
+      "placeholder": "Message Wisp",
+      "link": "Link an item"
     }
   },
   "wispConcerns": {
