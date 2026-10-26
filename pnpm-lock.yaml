@@ -143,8 +143,8 @@ importers:
         specifier: ^19.0.0
         version: 19.0.0
       '@googleapis/gmail':
-        specifier: ^21.0.0
-        version: 21.0.0
+        specifier: ^22.0.2
+        version: 22.0.2
       '@googleapis/licensing':
         specifier: ^10.0.1
         version: 10.0.1
@@ -3022,8 +3022,8 @@ packages:
     resolution: {integrity: sha512-IK8eQiTDUCmI43sHlAs7O/PpPphSPY40HDoW/L7byQdQ4Qq8E9FaVDB/HRBsvlLToS+yI4x3C90tR8HrFoHYWQ==}
     engines: {node: '>=22.0.0'}
 
-  '@googleapis/gmail@21.0.0':
-    resolution: {integrity: sha512-b9znRPY7U+McFYv2DhoA/Nq22B/q68vTlRA+EuOwPnmglhei74KUUKX3EPX3vYIxkgVcYN3iGN7tKan8g2Iz/g==}
+  '@googleapis/gmail@22.0.2':
+    resolution: {integrity: sha512-/Yg6UwLZaI74jY4Q8RhAFlEw4q+71c47oKlqr3ArGTG4HERa0S5NgzmTjECcV720tATnz9bpIvAnJ91VVnNHVA==}
     engines: {node: '>=22.0.0'}
 
   '@googleapis/licensing@10.0.1':
@@ -13967,9 +13967,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@googleapis/gmail@21.0.0':
+  '@googleapis/gmail@22.0.2':
     dependencies:
-      googleapis-common: 9.0.4
+      googleapis-common: 9.3.1
     transitivePeerDependencies:
       - supports-color
 
