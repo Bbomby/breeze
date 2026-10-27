@@ -267,6 +267,7 @@ const EXPECTED_EMPTY_ALLOWLIST_ADMISSIONS: string[] = [
   // Tier-3 run_script consumes it, and the handler itself returns
   // feature_disabled while BREEZE_AI_SCRIPT_AUTHORING_ENABLED is off.
   'get_script_proposal',
+  'get_security_compliance', // Full-control W11 (#6781): tier-1 status/compliance read, device-scoped
   'get_security_posture',
   'get_service_monitoring_status',
   'get_site', // A-W06 Tier-1 read
@@ -999,8 +1000,10 @@ describe('AGENT_HUMAN_ONLY_ACTIONS (W02-D2, #6756)', () => {
     vi.unstubAllEnvs();
   });
 
-  it('is exactly manage_tags add/remove and manage_groups add_devices/remove_devices (both feed run scope), each with a real reason', () => {
+  it('is exactly manage_tags add/remove, manage_groups add_devices/remove_devices (both feed run scope) and the two W11 audit-baseline writes, each with a real reason', () => {
     expect([...AGENT_HUMAN_ONLY_ACTIONS.keys()].sort()).toEqual([
+      // W11-D8 (#6781, quorum QW5/QW9): users-FK writes a user-owned release would run without the run's ceiling.
+      'manage_audit_baselines:create', 'manage_audit_baselines:request_apply',
       // W04-D8 (#6758): group membership is the same self-scope path (triggers.deviceGroupIds).
       'manage_groups:add_devices', 'manage_groups:remove_devices',
       'manage_tags:add', 'manage_tags:remove',
@@ -1059,6 +1062,37 @@ describe('AGENT_HUMAN_ONLY_ACTIONS (W02-D2, #6756)', () => {
   it('control: manage_groups:list still reaches an agent', () => {
     const check = checkAgentGuardrails('manage_groups', { action: 'list' }, groupPolicy);
     expect(check.disposition).toBe('allow');
+  });
+
+  // W11-D8 (#6781): the audit-baseline writes are human-only actions; the reads stay reachable.
+  const baselinePolicy = policyWith({
+    mode: 'act', toolAllowlist: ['manage_audit_baselines', 'manage_audit_baselines:create', 'manage_audit_baselines:request_apply'],
+  });
+
+  it.each([
+    ['create', { name: 'CIS L1', osType: 'windows', profile: 'cis_l1' }],
+    ['request_apply', { baselineId: 'b-1', deviceIds: ['dev-1'] }],
+  ] as const)('denies an allowlisted manage_audit_baselines:%s', (action, extra) => {
+    const check = checkAgentGuardrails('manage_audit_baselines', { action, ...extra }, baselinePolicy);
+    expect(check.disposition).toBe('deny');
+    expect(check.reason).toMatch(/never available to agents/);
+  });
+
+  it('control: manage_audit_baselines:list still reaches an agent', () => {
+    const check = checkAgentGuardrails('manage_audit_baselines', { action: 'list' }, baselinePolicy);
+    expect(check.disposition).toBe('allow');
+  });
+
+  it.each(['manage_access_reviews', 'manage_pam_rules'])('%s is never offered to an agent, reads included (W11 D4 exception)', (tool) => {
+    const read = tool === 'manage_pam_rules' ? 'list_rules' : 'list';
+    const check = checkAgentGuardrails(tool, { action: read }, policyWith({ mode: 'act', toolAllowlist: [tool, `${tool}:${read}`] }));
+    expect(check.disposition).toBe('deny');
+  });
+
+  it('control: the W11 recovery-key list reaches an agent; rotate becomes a proposal', () => {
+    const policy = policyWith({ mode: 'act', toolAllowlist: ['manage_recovery_keys', 'manage_recovery_keys:rotate'] });
+    expect(checkAgentGuardrails('manage_recovery_keys', { action: 'list', deviceId: 'dev-1' }, policy).disposition).toBe('allow');
+    expect(checkAgentGuardrails('manage_recovery_keys', { action: 'rotate', deviceId: 'dev-1' }, policy).disposition).not.toBe('allow');
   });
 });
 
