@@ -465,6 +465,37 @@ pub fn publish_prompt_state(app: &AppHandle, prompt_id: Option<&str>) {
     crate::refresh_tray_menu(app);
 }
 
+/// Windows that may read the MSP identity (#10190 W03): the main window
+/// (Notifications tab locale) and prompt cards. Message, chat, consent and
+/// other windows may not. Lives here, not in prompt.rs, which never names the
+/// main window (#8138 guard).
+pub fn identity_window_allowed(label: &str) -> bool {
+    label == "main" || label.starts_with(super::prompt::WINDOW_LABEL_PREFIX)
+}
+
+/// The event the identity header listens for (main window and prompt cards).
+pub const PROMPT_IDENTITY_EVENT: &str = "prompt-identity-updated";
+
+/// After a branding sync (or the session that carried it ending): tell the
+/// windows allowed to read the identity that it changed, and relabel the tray
+/// in the synced language. An event only: never shows or focuses a window.
+///
+/// The event is a version notice, never the identity. Tauri delivers every
+/// emit (emit_filter and emit_to alike) to a JS listener registered without a
+/// target in ANY window, so targeting alone cannot keep the identity out of
+/// other windows; the identity is read through `get_prompt_identity`, which
+/// checks the caller's label.
+pub fn publish_prompt_identity(app: &AppHandle) {
+    let Some(bridge) = app.try_state::<std::sync::Arc<super::prompt::PromptBridge>>() else { return };
+    let notice: super::prompt::PromptIdentityNotice = bridge.tracker().identity_notice();
+    for label in app.webview_windows().into_keys().filter(|l| identity_window_allowed(l)) {
+        if let Err(e) = app.emit_to(label.as_str(), PROMPT_IDENTITY_EVENT, notice) {
+            eprintln!("[helper] failed to emit {}: {}", PROMPT_IDENTITY_EVENT, e);
+        }
+    }
+    crate::refresh_tray_menu(app);
+}
+
 /// The logical work area of the monitor holding the cursor (else the primary).
 fn cursor_work_area(app: &AppHandle) -> Option<Rect> {
     let monitor = app

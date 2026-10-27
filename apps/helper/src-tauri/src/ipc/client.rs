@@ -130,6 +130,11 @@ struct AuthRequest {
     /// This helper's version, reported in the live renderer observation.
     #[serde(rename = "rendererVersion")]
     renderer_version: String,
+    /// The OS UI language (raw BCP 47 / POSIX tag; the agent negotiates it
+    /// onto the eight prompt locales). Additive (#10190 W03, plan P6); omitted
+    /// when the probe found nothing.
+    #[serde(rename = "uiLocale", skip_serializing_if = "String::is_empty")]
+    ui_locale: String,
 }
 
 fn is_zero_u32(v: &u32) -> bool {
@@ -188,6 +193,7 @@ fn build_auth_request(id: &PeerIdentity) -> AuthRequest {
         prompt_protocol_version: PROMPT_PROTOCOL_VERSION,
         prompt_kinds: ADVERTISED_PROMPT_KINDS.iter().map(|k| k.to_string()).collect(),
         renderer_version: env!("CARGO_PKG_VERSION").to_string(),
+        ui_locale: crate::chrome::os_ui_locale().to_string(),
     }
 }
 
@@ -1053,12 +1059,13 @@ fn handle_prompt_action_result(
     }
 }
 
-/// `prompt_branding_sync`: the MSP identity, kept in memory (W03 renders it).
+/// `prompt_branding_sync`: the MSP identity, kept in memory; the bridge tells
+/// the main window and the prompt cards (identity header) and the tray.
+/// `cleared: true` drops the identity.
 fn handle_prompt_branding_sync(prompts: &PromptBridge, env_id: &str, payload: &Option<Box<RawValue>>) {
     match payload_str(payload).map(serde_json::from_str::<prompt::PromptBrandingSync>) {
         Some(Ok(sync)) => {
-            let stored = prompts.tracker().on_branding_sync(sync);
-            if !stored {
+            if !prompts.branding_sync(sync) {
                 eprintln!("[helper] prompt_branding_sync ignored: incomplete identity (env={})", log_id(env_id));
             }
         }
@@ -1133,7 +1140,9 @@ impl Drop for BridgeClearGuard {
         if let Some(prompts) = &self.prompts {
             prompts.clear_sender();
             let had_list = prompts.tracker().list_len(now_unix_ms()) > 0;
-            let cards = prompts.tracker().on_disconnect();
+            // The identity dies with the session too (the bridge tells the
+            // windows); the agent re-syncs it after the next auth.
+            let cards = prompts.disconnect();
             if let Some(app) = &self.app {
                 // Nothing tracked (always, in W02): leave the tray and the
                 // main window untouched.
@@ -2120,6 +2129,7 @@ mod prompt_auth_tests {
             prompt_protocol_version: super::super::prompt::PROMPT_PROTOCOL_VERSION,
             prompt_kinds: kinds,
             renderer_version: renderer_version.into(),
+            ui_locale: String::new(),
         }
     }
 
@@ -2152,5 +2162,52 @@ mod prompt_auth_tests {
         let want: Vec<String> = super::super::prompt::ADVERTISED_PROMPT_KINDS.iter().map(|s| s.to_string()).collect();
         assert_eq!(req.prompt_kinds, want);
         assert_eq!(req.renderer_version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn auth_request_carries_ui_locale() {
+        // The built request reports the OS UI language Assist probed.
+        let id = PeerIdentity { uid: 501, sid: String::new(), username: "tester".into(), pid: 7 };
+        assert_eq!(build_auth_request(&id).ui_locale, crate::chrome::os_ui_locale());
+
+        // On the wire: `uiLocale`, additive, omitted when the probe found nothing.
+        let mut req = request(Vec::new(), "0.2.0");
+        req.ui_locale = "de-DE".into();
+        let json = serde_json::to_value(&req).unwrap();
+        assert_eq!(json["uiLocale"], "de-DE");
+        req.ui_locale = String::new();
+        let json = serde_json::to_value(&req).unwrap();
+        assert!(json.as_object().unwrap().get("uiLocale").is_none());
+    }
+
+    // W03 review: the real handlers drive the identity publish. Removing the
+    // publish from the branding-sync handler or from the session-end guard
+    // fails here.
+    #[test]
+    fn branding_sync_handler_and_session_end_publish_the_identity() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        const SET: &str = include_str!("../../../../../packages/shared/src/fixtures/prompt-host/branding_sync.set.json");
+        let prompts = std::sync::Arc::new(PromptBridge::default());
+        let n = std::sync::Arc::new(AtomicUsize::new(0));
+        let c = n.clone();
+        prompts.set_identity_notifier(move || {
+            c.fetch_add(1, Ordering::SeqCst);
+        });
+        let payload = Some(RawValue::from_string(SET.to_string()).unwrap());
+        handle_prompt_branding_sync(&prompts, "env-1", &payload);
+        assert_eq!(n.load(Ordering::SeqCst), 1, "a stored sync is published");
+        assert!(prompts.tracker().identity().is_some());
+
+        let guard = BridgeClearGuard {
+            bridge: None,
+            caller: None,
+            app: None,
+            messages: None,
+            chat: None,
+            prompts: Some(prompts.clone()),
+        };
+        drop(guard);
+        assert_eq!(n.load(Ordering::SeqCst), 2, "session end publishes the dropped identity");
+        assert!(prompts.tracker().identity().is_none());
     }
 }
