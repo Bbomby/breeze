@@ -35,9 +35,11 @@ The workers are the built-in AI every Breeze deployment has.
 
 ## Wisp
 
-**[Wisp](/features/wisp/)** is one per person and sits above the workers. It keeps an eye on the estate that person can see, nudges them when something needs a human, and hands focused jobs to the workers. What it hands off shows up as a run or an AI task.
+**[Wisp](/features/wisp/)** is one per person and sits above the workers. It keeps an eye on the estate that person can see, nudges them when something needs a human, and hands focused jobs to the workers. What it hands off shows up as a run or an AI task. Wisp runs on Breeze Cloud only: on a self-hosted server its sidebar entry and page show a lock, and there is nothing to configure.
 
 ## Governance
+
+AI settings have one home, **Settings → AI** (`/settings/ai`, v0.125.0+). It gathers the AI cards you are allowed to open, including AI Usage, Script authoring and Tool Sources; their pages keep their addresses.
 
 The same controls apply to every worker: the [AI risk engine](#ai-risk-engine) and its tiers, [Approvals](#approval-workflow), [rate limits](#rate-limits), [cost tracking](#ai-cost-tracking), [bring your own LLM key](/features/bring-your-own-llm-key/), [tool sources](/features/tool-sources/) and the audit trail.
 
@@ -330,7 +332,7 @@ Every AI session tracks token usage and estimated cost. The `aiCostTracker` serv
 
 ### Viewing costs
 
-Navigate to **Settings → AI Usage** to view:
+Navigate to **Settings → AI → AI Usage** (`/settings/ai-usage`) to view:
 
 | Metric | Description |
 |---|---|
