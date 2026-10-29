@@ -95,6 +95,23 @@ export async function recordWebhookDelivery(
   webhook: WebhookFanoutTarget,
   event: BreezeEvent
 ): Promise<WebhookDeliveryRecordOutcome> {
+  const timestamp = event.metadata.timestamp;
+  const parsedTimestamp = typeof timestamp === 'string' ? new Date(timestamp) : null;
+  const eventTimestamp = parsedTimestamp && Number.isFinite(parsedTimestamp.getTime()) ? parsedTimestamp : null;
+  if (timestamp !== undefined && eventTimestamp === null) {
+    let rawTimestamp: string;
+    try {
+      rawTimestamp = JSON.stringify(timestamp) ?? String(timestamp);
+    } catch {
+      rawTimestamp = String(timestamp);
+    }
+    console.warn(`[WebhookDelivery] event-timestamp-invalid ${JSON.stringify({
+      errorId: 'WEBHOOK_DELIVERY_EVENT_TIMESTAMP_INVALID',
+      eventId: event.id,
+      webhookId: webhook.id,
+      timestamp: rawTimestamp.slice(0, 100)
+    })}`);
+  }
   return runWithSystemDbAccess(async () => {
     const [delivery] = await db
       .insert(webhookDeliveries)
@@ -103,6 +120,9 @@ export async function recordWebhookDelivery(
         eventType: event.type,
         eventId: event.id,
         payload: event.payload,
+        payloadVersion: webhook.payloadVersion ?? 1,
+        eventTimestamp,
+        replayRootEventId: null,
         status: 'pending',
         attempts: 0
       })
