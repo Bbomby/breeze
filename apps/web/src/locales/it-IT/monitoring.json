@@ -333,10 +333,13 @@
     "cancel": "Annulla",
     "detachConfirm": "Scollegare da {{policy}}?",
     "errors": {
+      "loadGroups": "Impossibile caricare i gruppi di dispositivi.",
       "attach": "Impossibile collegare il monitor",
       "detach": "Impossibile scollegare il monitor",
       "linkedFeature": "I monitor di questa policy provengono da una policy di funzionalità condivisa. Modifica quella policy o scegline un'altra."
-    }
+    },
+    "partnerWideGroups": "Tutte le org. (a livello di partner)",
+    "organizationGroups": "Gruppi dell’organizzazione"
   },
   "policyTab": {
     "title": "Monitor",

@@ -333,10 +333,13 @@
     "cancel": "İptal",
     "detachConfirm": "{{policy}} politikasından kaldırılsın mı?",
     "errors": {
+      "loadGroups": "Cihaz grupları yüklenemedi.",
       "attach": "Monitör eklenemedi",
       "detach": "Monitör kaldırılamadı",
       "linkedFeature": "Bu ilkenin monitörleri paylaşılan bir özellik ilkesinden geliyor. O ilkeyi düzenleyin veya başka bir ilke seçin."
-    }
+    },
+    "partnerWideGroups": "Tüm kuruluşlar (iş ortağı genelinde)",
+    "organizationGroups": "Kuruluş grupları"
   },
   "policyTab": {
     "title": "Monitörler",
