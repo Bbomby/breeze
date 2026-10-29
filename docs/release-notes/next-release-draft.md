@@ -140,3 +140,17 @@ A UAC elevation the end user declines on the device (Deny, the PAM dialog times 
 - Partner-owned dynamic groups now have per-device and revisioned per-org evaluation, excluding Quick Support and holding organizations.
 - Still dark: nothing user-visible until W3 adds the create route. No migration, setting or environment variable.
 - A six-hour retry sweep repairs missed evaluations; it is a retry cadence, with no freshness SLA.
+
+
+### Device groups (partner-owned) — W3 API
+
+- Partner administrators with access to all organizations can create, edit, preview, and delete partner-owned dynamic device groups through the API.
+- Organization users can read their partner's group names and All orgs ownership fields, with only their own organization's members and counts; filter rules stay hidden.
+- Partner-owned configuration policies can target their partner's groups, using device-group assignment precedence.
+- Unsupported group filter references return `PARTNER_GROUP_FILTER_UNSUPPORTED`; manual membership changes and pinning remain unavailable for partner groups.
+- No migration, setting, or environment variable is required for this wave.
+
+#### Review fixes
+
+- Partner-group previews that time out before evaluating any organization now return the standard `422 filter_query_timeout` response; successful partial previews report whether a timeout or the preview budget stopped evaluation.
+- Group create, edit, and add-device requests with malformed JSON now return an explicit `400 Malformed JSON in request body` error.
