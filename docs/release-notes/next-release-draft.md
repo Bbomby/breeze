@@ -166,6 +166,9 @@ A UAC elevation the end user declines on the device (Deny, the PAM dialog times 
 - Still dark: nothing user-visible until W3 adds the create route. No migration, setting or environment variable.
 - A six-hour retry sweep repairs missed evaluations; it is a retry cadence, with no freshness SLA.
 
+### Device group software rules
+
+Dynamic device groups can now match software versions below, at least, or equal to a chosen version, and match software vendors by name or substring. Version rules compare numeric segments and ignore suffixes such as “(x64)” or “-beta”, so 1.2 and 1.2.0 match equally. Membership updates when installed versions or vendors change, even when software names stay the same.
 ### Event logs
 
 - Agent event-log uploads are now validated per row (#10494). Previously one invalid event made the API reject the whole upload with 400, and every event in that collection window was lost.
