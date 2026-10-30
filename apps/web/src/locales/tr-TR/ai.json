@@ -634,6 +634,7 @@
     },
     "header": {
       "scopeAll": "Tüm kuruluşlar",
+      "scopeFallback": "bu kuruluş",
       "status": {
         "active": "Etkin",
         "paused": "Duraklatıldı",
