@@ -2751,5 +2751,35 @@
   },
   "sensitiveDataAccess": {
     "noOrgAccess": "Bu kuruluşa erişiminiz yok"
+  },
+  "sensitiveDataLabels": {
+    "risk": {
+      "critical": "Kritik",
+      "high": "Yüksek",
+      "medium": "Orta",
+      "low": "Düşük"
+    },
+    "findingStatus": {
+      "open": "Açık",
+      "remediated": "Giderildi",
+      "accepted": "Kabul edildi",
+      "falsePositive": "Yanlış pozitif"
+    },
+    "scanStatus": {
+      "queued": "Kuyrukta",
+      "running": "Çalışıyor",
+      "completed": "Tamamlandı",
+      "failed": "Başarısız",
+      "cancelled": "İptal edildi"
+    },
+    "dataType": {
+      "credential": "Kimlik bilgileri",
+      "financial": "Finansal"
+    },
+    "a11y": {
+      "editPolicy": "{{name}} ilkesini düzenle",
+      "deletePolicy": "{{name}} ilkesini sil",
+      "togglePolicyActive": "Etkin: {{name}}"
+    }
   }
 }
