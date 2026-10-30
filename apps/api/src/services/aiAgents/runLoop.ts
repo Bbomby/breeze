@@ -1968,6 +1968,7 @@ function assessmentPromptContext(
     watchLines: a.watch ? watchPromptLines(a.watch) : null,
     readiness: a.readiness,
     nudgeFeedback: a.nudgeFeedback,
+    firstLook: a.firstLook,
   };
 }
 
