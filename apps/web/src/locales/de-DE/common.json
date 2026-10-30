@@ -1296,7 +1296,7 @@
           "waiting": "Wartend"
         },
         "ticketCount": "{{filtered}} von {{total}} Tickets",
-        "title": "Synchronisierte Tickets",
+        "title": "PSA-Tickets",
         "unlinked": "Nicht verknüpft"
       }
     },
