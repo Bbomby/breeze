@@ -4286,7 +4286,9 @@
     "active": "Attiva",
     "revoked": "Revocata",
     "expired": "Scaduta",
-    "statusFilterLabel": "Stato della chiave"
+    "statusFilterLabel": "Stato della chiave",
+    "expires": "Scade",
+    "neverExpires": "Mai"
   },
   "apiKeysPage": {
     "loadingAPIKeys": "Caricamento chiavi API...",
@@ -4327,7 +4329,8 @@
     "rotating": "Rotazione...",
     "rotateKey": "Ruota chiave",
     "revoking": "Revoca...",
-    "revokeKey": "Revoca chiave"
+    "revokeKey": "Revoca chiave",
+    "revokedToast": "Chiave API \"{{name}}\" revocata"
   },
   "approverDevicesSection": {
     "thisDeviceCanNowApproveRequests": "Questo dispositivo ora può approvare richieste",
@@ -6420,7 +6423,11 @@
       "label": "Etichetta",
       "notes": "Note"
     },
-    "empty": "Ancora nessun ospite noto."
+    "empty": "Ancora nessun ospite noto.",
+    "removeConfirm": {
+      "title": "Rimuovere l'ospite noto?",
+      "message": "Rimuovere {{label}} ({{mac}})? I dispositivi con questo indirizzo MAC non verranno più approvati automaticamente nelle tue organizzazioni gestite."
+    }
   },
   "userInviteForm": {
     "title": "Invita utente",
@@ -6542,7 +6549,8 @@
       "copyLink": "Copia link",
       "mfaReset": "MFA reimpostata per {{email}}",
       "roleUpdated": "Ruolo aggiornato",
-      "orgAccessUpdated": "Accesso alle organizzazioni aggiornato"
+      "orgAccessUpdated": "Accesso alle organizzazioni aggiornato",
+      "userRemoved": "Utente {{name}} rimosso"
     },
     "resetMfa": {
       "title": "Reimpostare MFA?",
