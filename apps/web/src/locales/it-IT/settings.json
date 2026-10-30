@@ -1902,6 +1902,12 @@
     "description": "Regola i criteri predefiniti e il comportamento di registrazione per {{organization}}.",
     "save": "Salva predefiniti",
     "managedByPartner": "Gestito dal partner",
+    "inheritance": {
+      "inherited": "Valore predefinito ereditato",
+      "overridden": "Impostato per questa organizzazione",
+      "reset": "Ripristina il valore predefinito",
+      "resetLabel": "Ripristina il valore predefinito: {{setting}}"
+    },
     "policies": {
       "title": "Criteri predefiniti",
       "fields": {

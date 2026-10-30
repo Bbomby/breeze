@@ -1902,6 +1902,12 @@
     "description": "Optimieren Sie die Standardrichtlinien und das Registrierungsverhalten für {{organization}}.",
     "save": "Standardeinstellungen speichern",
     "managedByPartner": "Verwaltet durch Partner",
+    "inheritance": {
+      "inherited": "Geerbter Standardwert",
+      "overridden": "Für diese Organisation festgelegt",
+      "reset": "Auf Standard zurücksetzen",
+      "resetLabel": "{{setting}} auf Standard zurücksetzen"
+    },
     "policies": {
       "title": "Standardrichtlinien",
       "fields": {

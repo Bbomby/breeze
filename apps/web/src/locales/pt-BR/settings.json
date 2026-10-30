@@ -1902,6 +1902,12 @@
     "description": "Ajuste as políticas padrão e o comportamento de cadastro para {{organization}}.",
     "save": "Salvar padrões",
     "managedByPartner": "Gerenciado pelo parceiro",
+    "inheritance": {
+      "inherited": "Padrão herdado",
+      "overridden": "Definido para esta organização",
+      "reset": "Redefinir para o padrão",
+      "resetLabel": "Redefinir {{setting}} para o padrão"
+    },
     "policies": {
       "title": "Políticas padrão",
       "fields": {
