@@ -109,6 +109,8 @@ import {
 import { scanProjectedAutomationRuns } from './automationReadProjection';
 import { assertReportExecutionPreflight } from './reportGenerationService';
 import { deleteDeviceGroup, DeviceGroupDeleteError } from './deviceGroupDelete';
+import { aiQueueCommandForExecution } from './aiDispatch';
+import { CommandTypes } from './commandTypes';
 import {
   decodeSiteScope,
   intersectSiteScopes,
@@ -1386,8 +1388,77 @@ export function registerFleetTools(aiTools: Map<string, AiTool>): void {
       }
 
       if (action === 'scan') {
+        // #10383: this branch used to validate deviceIds and return
+        // `success: true` without dispatching anything — the technician
+        // approved a Tier-2 card for a no-op. It now queues the same
+        // `patch_scan` command as POST /patches/scan (routes/patches/
+        // operations.ts), one per device, and reports each outcome honestly.
         if (!Array.isArray(input.deviceIds) || input.deviceIds.length === 0) return JSON.stringify({ error: 'deviceIds is required' });
-        return JSON.stringify({ success: true, message: `Patch scan requested for ${(input.deviceIds as string[]).length} device(s)`, deviceIds: input.deviceIds });
+        const scanDeviceIds = [...new Set(input.deviceIds as string[])];
+
+        // Every device must be in the caller's org AND site/device scope
+        // (#7827: each device's own org is authoritative). All-or-nothing,
+        // before any dispatch: the approval card named exactly this set, so a
+        // partial scan would act on something other than what was approved.
+        const scanDevices = await db.select({ id: devices.id, siteId: devices.siteId, orgId: devices.orgId })
+          .from(devices)
+          .where(and(inArray(devices.id, scanDeviceIds), orgWhere(auth, devices.orgId)));
+        const accessibleScanDevices = new Map(
+          scanDevices
+            .filter((d) => !deviceSiteDenied(auth, d.siteId, d.id))
+            .map((d) => [d.id, d] as const),
+        );
+        const deniedScanIds = scanDeviceIds.filter((id) => !accessibleScanDevices.has(id));
+        if (deniedScanIds.length > 0) {
+          return JSON.stringify({
+            error: `${deniedScanIds.length} device(s) not found or access denied — no scan was queued`,
+            deviceIds: deniedScanIds,
+          });
+        }
+
+        const queued: Array<{ deviceId: string; commandId: string; delivery: string }> = [];
+        const failed: Array<{ deviceId: string; error: string }> = [];
+        // Sequential, and deliberately NOT wrapped per device in try/catch:
+        // the handler runs inside one per-call transaction, so a thrown DB
+        // error aborts it and rolls back every row queued earlier in this
+        // loop. Catching it would report those rolled-back commands as
+        // queued. A throw fails the whole call through safeHandler instead;
+        // per-device refusals come back as `error` results, not throws.
+        for (const deviceId of scanDeviceIds) {
+          const device = accessibleScanDevices.get(deviceId)!;
+          const result = await aiQueueCommandForExecution(
+            auth,
+            'manage_patches',
+            deviceId,
+            CommandTypes.PATCH_SCAN,
+            {},
+            { userId: auth.user?.id, expectedOrgId: device.orgId },
+          );
+          // A `cancelled` result carries both a command row and an error:
+          // the row exists but will never run, so it is a failure.
+          if (result.error || !result.command) {
+            failed.push({ deviceId, error: result.error ?? 'Patch scan was not queued' });
+            continue;
+          }
+          queued.push({ deviceId, commandId: result.command.id, delivery: result.delivery ?? result.command.status });
+        }
+
+        if (queued.length === 0) {
+          return JSON.stringify({
+            success: false,
+            error: `No patch scan was queued — all ${failed.length} device(s) refused it (see failed[]).`,
+            queued,
+            failed,
+          });
+        }
+        return JSON.stringify({
+          success: failed.length === 0,
+          message: `Patch scan queued for ${queued.length} of ${scanDeviceIds.length} device(s)`
+            + (failed.length > 0 ? `; ${failed.length} refused it (see failed[])` : '')
+            + '. An online device runs it now; an offline one runs it when it next checks in. The scan updates the device\'s patch inventory when it finishes (usually a few minutes) — check with manage_patches action "list" and that deviceId.',
+          queued,
+          failed,
+        });
       }
 
       if (action === 'approve' || action === 'decline') {
